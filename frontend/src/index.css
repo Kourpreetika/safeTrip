@@ -1,0 +1,339 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #f7c948;
+  --color-header: #111111;
+  --color-ink: #1a1a1a;
+  --color-surface: #fafaf8;
+  --color-muted: #6b6b6b;
+  --color-line: #e6e6e4;
+  --color-sos: #dc2626;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  font-family: Inter, system-ui, sans-serif;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.bg-header {
+  background-color: var(--color-header);
+}
+
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.bg-ink {
+  background-color: var(--color-ink);
+}
+
+.bg-sos {
+  background-color: var(--color-sos);
+}
+
+.text-header {
+  color: var(--color-header);
+}
+
+.text-primary {
+  color: var(--color-primary);
+}
+
+.text-ink {
+  color: var(--color-ink);
+}
+
+.text-sos {
+  color: var(--color-sos);
+}
+
+.border-primary {
+  border-color: var(--color-primary);
+}
+
+.hover\:bg-header:hover {
+  background-color: var(--color-header);
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-muted,
+.btn-dark,
+.btn-sos {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1.15rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  transition: filter 0.15s ease, transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-muted:disabled,
+.btn-dark:disabled,
+.btn-sos:disabled {
+  opacity: 0.6;
+  transform: none;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-ink);
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #fff;
+  color: var(--color-ink);
+  border: 1.5px solid var(--color-ink);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-ink);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btn-muted {
+  background: #fff;
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+}
+
+.btn-muted:hover:not(:disabled) {
+  background: var(--color-surface);
+  transform: translateY(-1px);
+}
+
+.btn-dark {
+  background: var(--color-header);
+  color: #fff;
+}
+
+.btn-dark:hover:not(:disabled) {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.btn-sos {
+  background: var(--color-sos);
+  color: #fff;
+  padding: 1.05rem 1.25rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.btn-sos:hover:not(:disabled) {
+  filter: brightness(0.92);
+  transform: translateY(-1px);
+}
+
+.input-field {
+  width: 100%;
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input-field::placeholder {
+  color: #9ca3af;
+}
+
+.input-field:focus {
+  border-color: var(--color-ink);
+  box-shadow: 0 0 0 3px rgba(247, 201, 72, 0.45);
+}
+
+.input-field:disabled {
+  background: var(--color-surface);
+  color: #6b7280;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.card {
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(17, 17, 17, 0.05), 0 8px 24px rgba(17, 17, 17, 0.04);
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.page-lead {
+  margin-top: 0.35rem;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: var(--color-muted);
+}
+
+.empty-state {
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-muted);
+  box-shadow: 0 1px 2px rgba(17, 17, 17, 0.04);
+}
+
+.status-pill {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.link {
+  font-weight: 600;
+  color: var(--color-ink);
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.link:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-primary);
+}
+
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: var(--color-primary);
+  color: var(--color-ink);
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #eee;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.pulse-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 0 rgba(247, 201, 72, 0.55);
+  animation: pulse 1.8s infinite;
+}
+
+.pulse-dot.sos {
+  background: var(--color-sos);
+  box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5);
+  animation-name: pulse-sos;
+}
+
+@keyframes pulse {
+  70% {
+    box-shadow: 0 0 0 12px rgba(247, 201, 72, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(247, 201, 72, 0);
+  }
+}
+
+@keyframes pulse-sos {
+  70% {
+    box-shadow: 0 0 0 12px rgba(220, 38, 38, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
+
+.pin {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+}
+
+input,
+select,
+textarea {
+  outline: none;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--color-primary);
+  width: 1rem;
+  height: 1rem;
+}
+
+.sos-overlay {
+  background: rgba(80, 16, 16, 0.94);
+}
+
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hero-fade {
+  animation: hero-in 0.55s ease-out both;
+}
+
+.hero-fade-delay {
+  animation: hero-in 0.7s ease-out 0.08s both;
+}

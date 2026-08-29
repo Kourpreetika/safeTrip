@@ -1,0 +1,13 @@
+{
+  "name": "safetrip",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently -n api,web -c teal,magenta \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "setup": "npm install --prefix backend && npm install --prefix frontend && npm run db:push --prefix backend",
+    "test": "npm test --prefix backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

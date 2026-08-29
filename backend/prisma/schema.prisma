@@ -1,0 +1,131 @@
+// SafeTrip tables. SQLite is a local file so the project runs without installing MySQL/Postgres.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  phone        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  contacts      TrustedContact[]
+  journeys      Journey[]
+  notifications Notification[]
+}
+
+model TrustedContact {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  phone        String
+  email        String?
+  relationship String?
+  createdAt    DateTime @default(now())
+
+  journeys JourneyContact[]
+
+  @@index([userId])
+}
+
+model Journey {
+  id                   String    @id @default(cuid())
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startAddress         String
+  startLat             Float
+  startLng             Float
+  destAddress          String
+  destLat              Float
+  destLng              Float
+  vehicleNumber        String
+  driverName           String
+  rideProvider         String? // Uber | Rapido | Auto | Other
+  rideId               String?
+  estimatedDurationMin Int
+  status               String    @default("draft") // draft | active | completed | cancelled
+  sosActive            Boolean   @default(false)
+  shareToken           String    @unique
+  plannedRouteJson     String? // JSON: number[][] as [lat, lng]
+  routeDistanceMeters   Float?
+  currentLat           Float?
+  currentLng           Float?
+  etaMinutes           Int?
+  etaSource            String?
+  lastSmsAt            DateTime?
+  lastRouteRefreshAt   DateTime?
+  offRoute             Boolean   @default(false)
+  offRouteStreak       Int      @default(0)
+  startedAt            DateTime?
+  completedAt          DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  contacts  JourneyContact[]
+  locations LocationUpdate[]
+  sosEvents SosEvent[]
+
+  @@index([userId, status])
+  @@index([shareToken])
+}
+
+model JourneyContact {
+  id        String         @id @default(cuid())
+  journeyId String
+  journey   Journey        @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   TrustedContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  notifiedAt DateTime?
+
+  @@unique([journeyId, contactId])
+}
+
+model LocationUpdate {
+  id        String   @id @default(cuid())
+  journeyId String
+  journey   Journey  @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  lat       Float
+  lng       Float
+  accuracy  Float?
+  speedMps  Float?
+  heading   Float?
+  source    String    @default("gps")
+  recordedAt DateTime @default(now())
+
+  @@index([journeyId, recordedAt])
+}
+
+model SosEvent {
+  id          String    @id @default(cuid())
+  journeyId   String
+  journey     Journey   @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  lat         Float
+  lng         Float
+  triggeredAt DateTime  @default(now())
+  cancelledAt DateTime?
+  status      String    @default("active") // active | cancelled | resolved
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  payload   String? // JSON
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
