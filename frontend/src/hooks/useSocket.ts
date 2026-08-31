@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { io } from "socket.io-client";
+import { API_BASE } from "../lib/apiBase";
 
 type Handlers = {
   shareToken?: string;
@@ -13,7 +14,7 @@ type Handlers = {
 export function useSocket(h: Handlers) {
   useEffect(() => {
     // Join the journey / share-token rooms so the map marker moves without refresh.
-    const socket = io({ withCredentials: true });
+    const socket = io(API_BASE || undefined, { withCredentials: true });
     if (h.shareToken) socket.emit("watch:track", h.shareToken);
     if (h.journeyId) socket.emit("watch:journey", h.journeyId);
     if (h.onLocation) socket.on("location:update", h.onLocation);

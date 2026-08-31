@@ -1,4 +1,4 @@
-const API = "";
+import { API_BASE } from "../lib/apiBase";
 
 export class ApiError extends Error {
   status: number;
@@ -15,7 +15,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   let res: Response;
   try {
-    res = await fetch(`${API}${path}`, {
+    res = await fetch(`${API_BASE}${path}`, {
       ...init,
       headers,
       credentials: "include",

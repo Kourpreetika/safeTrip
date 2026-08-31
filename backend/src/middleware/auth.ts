@@ -39,7 +39,8 @@ export function signToken(userId: string): string {
 export function setAuthCookie(res: Response, token: string) {
   res.cookie("tm_token", token, {
     httpOnly: true,
-    sameSite: "lax",
+    // Cross-site cookies (Vercel site → Render API) need SameSite=None; Secure.
+    sameSite: config.nodeEnv === "production" ? "none" : "lax",
     secure: config.nodeEnv === "production",
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
