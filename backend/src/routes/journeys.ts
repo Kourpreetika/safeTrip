@@ -89,10 +89,10 @@ router.get(
     ]);
     const withRoute = await prisma.journey.findMany({
       where: { userId: user.id, status: "completed" },
-      select: { routeDistanceMeters: true, offRoute: true },
+      select: { routeDistanceMeters: true, hadRouteDeviation: true },
     });
     const kmTravelled = withRoute.reduce((sum, j) => sum + (j.routeDistanceMeters ?? 0), 0) / 1000;
-    const deviationCount = withRoute.filter((j) => j.offRoute).length;
+    const deviationCount = withRoute.filter((j) => j.hadRouteDeviation).length;
     res.json({
       total,
       completed,
@@ -134,10 +134,11 @@ router.post(
   "/:id/start",
   asyncHandler(async (req, res) => {
     const { user } = req as AuthedRequest;
-    const journey = await startJourney({ journeyId: req.params.id, userId: user.id });
-    const trackUrl = `${config.clientOrigin}/track/${journey.shareToken}`;
+    const { journey, sms } = await startJourney({ journeyId: req.params.id, userId: user.id });
+    const trackUrl = `${config.clientOrigin.replace(/\/+$/, "")}/track/${journey.shareToken}`;
     res.json({
       journey: serializeJourney(journey),
+      sms,
       share: {
         trackUrl,
         whatsappText: encodeURIComponent(
@@ -231,6 +232,7 @@ router.post(
       ok: true,
       sos: result.sos,
       mapsLink: mapsLink(body.lat, body.lng),
+      sms: result.sms,
     });
   }),
 );

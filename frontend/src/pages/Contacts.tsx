@@ -7,6 +7,7 @@ import type { Contact } from "../types";
 export function ContactsPage() {
   const toast = useToast();
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [smsConfigured, setSmsConfigured] = useState<boolean | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -20,6 +21,9 @@ export function ContactsPage() {
 
   useEffect(() => {
     void load();
+    void api<{ smsConfigured?: boolean }>("/api/health")
+      .then((d) => setSmsConfigured(Boolean(d.smsConfigured)))
+      .catch(() => setSmsConfigured(null));
   }, []);
 
   function fill(c?: Contact) {
@@ -63,8 +67,22 @@ export function ContactsPage() {
     <div className="mx-auto max-w-2xl">
       <h1 className="page-title">Trusted Contacts</h1>
       <p className="page-lead">
-        Add people who should get SMS updates during your trip: live location, ETA, destination, and a tracking link.
+        Add people who should get an SMS when your trip starts: pickup, drop, driver, vehicle, ETA, map pin, and a live tracking link. They also get texts for SOS, off-route, and arrival.
       </p>
+      {smsConfigured === false && (
+        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-ink">
+          SMS is not on yet. On the API host (Render), set <span className="font-medium">FAST2SMS_API_KEY</span> from{" "}
+          <a className="link" href="https://www.fast2sms.com" target="_blank" rel="noreferrer">
+            Fast2SMS
+          </a>
+          , or Twilio / MSG91 keys, then redeploy. Until then, contacts will not receive texts.
+        </p>
+      )}
+      {smsConfigured === true && (
+        <p className="mt-4 rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted">
+          SMS is on. Selected contacts are texted automatically when you start a journey.
+        </p>
+      )}
       <form onSubmit={onSubmit} className="card mt-6 space-y-4 p-5">
         <label>
           <span className="field-label">Name</span>

@@ -95,10 +95,15 @@ export function ActiveJourneyPage() {
       return;
     }
     try {
-      await api(`/api/journeys/${id}/sos`, { method: "POST", body: JSON.stringify({ lat, lng }) });
+      const d = await api<{ sms?: { sent?: number; configured?: boolean } }>(`/api/journeys/${id}/sos`, {
+        method: "POST",
+        body: JSON.stringify({ lat, lng }),
+      });
       setConfirmSos(false);
+      if (d.sms?.sent) toast(`SOS SMS sent to ${d.sms.sent} contact${d.sms.sent === 1 ? "" : "s"}.`, "err");
+      else if (d.sms && d.sms.configured === false) toast("SOS recorded. SMS is not set up on the server.", "err");
+      else toast("SOS sent to trusted contacts.", "err");
       await load();
-      toast("SOS sent to trusted contacts.", "err");
     } catch (err) {
       toast(err instanceof ApiError ? err.message : "Could not send SOS.", "err");
     }

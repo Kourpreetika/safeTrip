@@ -4,6 +4,7 @@ import { getIO } from "../socket.ts";
 import { findRegisteredContactUserIds, notifyUsers } from "./notificationService.ts";
 import { config } from "../config.ts";
 import { sendJourneySms } from "./locationService.ts";
+import { isSmsConfigured, type SmsSendResult } from "./smsService.ts";
 
 export async function createJourney(params: {
   userId: string;
@@ -64,7 +65,10 @@ export const journeyInclude = {
   user: { select: { id: true, name: true, phone: true } },
 };
 
-export async function startJourney(params: { journeyId: string; userId: string }) {
+export async function startJourney(params: { journeyId: string; userId: string }): Promise<{
+  journey: Awaited<ReturnType<typeof createJourney>>;
+  sms: SmsSendResult;
+}> {
   const journey = await prisma.journey.findFirst({
     where: { id: params.journeyId, userId: params.userId },
     include: journeyInclude,
@@ -74,7 +78,9 @@ export async function startJourney(params: { journeyId: string; userId: string }
     (err as Error & { status: number }).status = 404;
     throw err;
   }
-  if (journey.status === "active") return journey;
+  if (journey.status === "active") {
+    return { journey, sms: { configured: isSmsConfigured(), sent: 0, failed: 0 } };
+  }
 
   const otherActive = await prisma.journey.findFirst({
     where: { userId: params.userId, status: "active", id: { not: journey.id } },
@@ -97,7 +103,7 @@ export async function startJourney(params: { journeyId: string; userId: string }
     include: journeyInclude,
   });
 
-  const trackUrl = `${config.clientOrigin}/track/${updated.shareToken}`;
+  const trackUrl = `${config.clientOrigin.replace(/\/+$/, "")}/track/${updated.shareToken}`;
   const recipientIds = (
     await findRegisteredContactUserIds(updated.contacts.map((c) => c.contact.email))
   ).filter((id) => id !== params.userId);
@@ -120,16 +126,16 @@ export async function startJourney(params: { journeyId: string; userId: string }
     shareToken: updated.shareToken,
   });
 
-  await sendJourneySms({
+  const sms = await sendJourneySms({
     journey: updated,
-    status: "Journey started",
+    status: "Trip started",
     force: true,
   });
 
-  return updated;
+  return { journey: updated, sms };
 }
 
-export function serializeJourney(journey: Awaited<ReturnType<typeof startJourney>>) {
+export function serializeJourney(journey: Awaited<ReturnType<typeof createJourney>>) {
   return {
     id: journey.id,
     status: journey.status,
@@ -151,6 +157,7 @@ export function serializeJourney(journey: Awaited<ReturnType<typeof startJourney
     currentLat: journey.currentLat,
     currentLng: journey.currentLng,
     offRoute: journey.offRoute,
+    hadRouteDeviation: journey.hadRouteDeviation,
     plannedRoute: journey.plannedRouteJson ? (JSON.parse(journey.plannedRouteJson) as number[][]) : [],
     routeDistanceMeters: journey.routeDistanceMeters,
     startedAt: journey.startedAt,

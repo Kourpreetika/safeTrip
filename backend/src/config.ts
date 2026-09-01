@@ -51,4 +51,5 @@ export const config = {
   msg91AuthKey: process.env.MSG91_AUTH_KEY ?? "",
   msg91SenderId: process.env.MSG91_SENDER_ID ?? "SAFTRP",
   msg91TemplateId: process.env.MSG91_TEMPLATE_ID ?? "",
+  fast2smsApiKey: process.env.FAST2SMS_API_KEY ?? "",
 };

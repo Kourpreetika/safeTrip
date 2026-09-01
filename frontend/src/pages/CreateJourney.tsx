@@ -148,8 +148,19 @@ export function CreateJourneyPage() {
           routeDistanceMeters: route.distanceMeters ?? undefined,
         }),
       });
-      const started = await api<{ journey: Journey }>(`/api/journeys/${created.journey.id}/start`, { method: "POST" });
-      toast("Journey started.");
+      const started = await api<{
+        journey: Journey;
+        sms?: { configured: boolean; sent: number; failed: number };
+      }>(`/api/journeys/${created.journey.id}/start`, { method: "POST" });
+      if (started.sms?.sent) {
+        toast(`Journey started. Trip SMS sent to ${started.sms.sent} contact${started.sms.sent === 1 ? "" : "s"}.`);
+      } else if (started.sms && !started.sms.configured) {
+        toast("Journey started. SMS is not set up on the server, so contacts were not texted.", "warn");
+      } else if (started.sms?.failed) {
+        toast("Journey started. Could not send SMS. Check contact numbers and the SMS key.", "warn");
+      } else {
+        toast("Journey started.");
+      }
       navigate(`/app/journey/${started.journey.id}`);
     } catch (err) {
       toast(err instanceof ApiError ? err.message : "Could not start the journey.", "err");

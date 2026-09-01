@@ -79,18 +79,18 @@ export async function triggerSos(params: {
   getIO().to(`track:${journey.shareToken}`).emit("sos:triggered", payload);
   getIO().to(`journey:${journey.id}`).emit("sos:triggered", payload);
 
-  await sendJourneySms({
+  const sms = await sendJourneySms({
     journey: {
       ...journey,
       etaMinutes: journey.etaMinutes,
       currentLat: params.lat,
       currentLng: params.lng,
     },
-    status: "SOS",
+    status: "SOS — needs help now",
     force: true,
   });
 
-  return { sos, payload };
+  return { sos, payload, sms };
 }
 
 export async function cancelSos(params: { journeyId: string; userId: string }) {

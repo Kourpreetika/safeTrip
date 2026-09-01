@@ -2,14 +2,29 @@ import { config } from "../config.ts";
 import { smsIntervalMs } from "../lib/smsSchedule.ts";
 import { normalizeIndianMobile } from "../lib/phone.ts";
 
+export { formatTripSms, mapsSmsLink } from "../lib/smsMessage.ts";
+
+export type SmsSendResult = {
+  configured: boolean;
+  sent: number;
+  failed: number;
+};
+
+export function resolvedSmsProvider(): "twilio" | "msg91" | "fast2sms" | "none" {
+  const named = config.smsProvider;
+  if (named === "twilio" || named === "msg91" || named === "fast2sms") return named;
+  if (config.fast2smsApiKey) return "fast2sms";
+  if (config.twilioAccountSid && config.twilioAuthToken && config.twilioFromNumber) return "twilio";
+  if (config.msg91AuthKey) return "msg91";
+  return "none";
+}
+
 export function isSmsConfigured(): boolean {
-  if (config.smsProvider === "twilio") {
-    return Boolean(config.twilioAccountSid && config.twilioAuthToken && config.twilioFromNumber);
-  }
-  if (config.smsProvider === "msg91") {
-    return Boolean(config.msg91AuthKey);
-  }
-  return false;
+  return resolvedSmsProvider() !== "none";
+}
+
+function tenDigit(e164: string): string {
+  return e164.replace(/^\+91/, "").replace(/\D/g, "");
 }
 
 async function sendViaTwilio(toE164: string, body: string): Promise<boolean> {
@@ -29,8 +44,7 @@ async function sendViaTwilio(toE164: string, body: string): Promise<boolean> {
     body: params,
   });
   if (!response.ok) {
-    const text = await response.text();
-    console.error("Twilio SMS failed:", response.status, text);
+    console.error("Twilio SMS failed:", response.status, await response.text());
     return false;
   }
   return true;
@@ -39,7 +53,7 @@ async function sendViaTwilio(toE164: string, body: string): Promise<boolean> {
 async function sendViaMsg91(toE164: string, body: string): Promise<boolean> {
   const key = config.msg91AuthKey;
   if (!key) return false;
-  const mobile = toE164.replace("+", "");
+  const mobile = tenDigit(toE164);
   const response = await fetch("https://control.msg91.com/api/v5/flow/", {
     method: "POST",
     headers: {
@@ -50,11 +64,10 @@ async function sendViaMsg91(toE164: string, body: string): Promise<boolean> {
     body: JSON.stringify({
       template_id: config.msg91TemplateId,
       short_url: "0",
-      recipients: [{ mobiles: mobile, VAR1: body }],
+      recipients: [{ mobiles: `91${mobile}`, VAR1: body }],
     }),
   });
   if (!response.ok) {
-    // Fallback: simple SMS API (no DLT template).
     const quick = await fetch(
       `https://api.msg91.com/api/sendhttp.php?authkey=${encodeURIComponent(key)}&mobiles=${mobile}&message=${encodeURIComponent(body)}&sender=${encodeURIComponent(config.msg91SenderId)}&route=4&country=91`,
     );
@@ -63,52 +76,62 @@ async function sendViaMsg91(toE164: string, body: string): Promise<boolean> {
   return true;
 }
 
+async function sendViaFast2Sms(toE164: string, body: string): Promise<boolean> {
+  const key = config.fast2smsApiKey;
+  if (!key) return false;
+  const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
+    method: "POST",
+    headers: {
+      authorization: key,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      route: "q",
+      message: body,
+      language: "english",
+      flash: 0,
+      numbers: tenDigit(toE164),
+    }),
+  });
+  if (!response.ok) {
+    console.error("Fast2SMS failed:", response.status, await response.text());
+    return false;
+  }
+  const data = (await response.json().catch(() => ({}))) as { return?: boolean };
+  return data.return !== false;
+}
+
 export async function sendSms(rawPhone: string, body: string): Promise<boolean> {
-  if (!isSmsConfigured()) return false;
+  const provider = resolvedSmsProvider();
+  if (provider === "none") return false;
   const to = normalizeIndianMobile(rawPhone);
   if (!to) return false;
   try {
-    if (config.smsProvider === "twilio") return await sendViaTwilio(to, body);
-    if (config.smsProvider === "msg91") return await sendViaMsg91(to, body);
+    if (provider === "twilio") return await sendViaTwilio(to, body);
+    if (provider === "msg91") return await sendViaMsg91(to, body);
+    if (provider === "fast2sms") return await sendViaFast2Sms(to, body);
   } catch (err) {
     console.error("SMS send error:", err);
   }
   return false;
 }
 
-export function formatJourneySms(params: {
-  userName: string;
-  status: string;
-  destAddress: string;
-  etaMinutes: number | null;
-  lat: number | null;
-  lng: number | null;
-  trackUrl: string;
-  updatedAt: Date;
-}): string {
-  const time = params.updatedAt.toLocaleString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "short",
-  });
-  const eta = params.etaMinutes != null ? `${params.etaMinutes} min` : "updating";
-  const loc =
-    params.lat != null && params.lng != null
-      ? `${params.lat.toFixed(4)}, ${params.lng.toFixed(4)}`
-      : "waiting for GPS";
-  return [
-    `SafeTrip: ${params.userName}`,
-    `Status: ${params.status}`,
-    `ETA: ${eta}`,
-    `To: ${params.destAddress}`,
-    `Location: ${loc}`,
-    `Updated: ${time}`,
-    `Track: ${params.trackUrl}`,
-  ].join("\n");
+export async function sendSmsToNumbers(phones: string[], body: string): Promise<SmsSendResult> {
+  if (!isSmsConfigured()) {
+    return { configured: false, sent: 0, failed: phones.length };
+  }
+  let sent = 0;
+  let failed = 0;
+  for (const phone of phones) {
+    if (await sendSms(phone, body)) sent += 1;
+    else failed += 1;
+  }
+  return { configured: true, sent, failed };
 }
 
 export function shouldSendScheduledSms(lastSmsAt: Date | null, etaMinutes: number | null, now = Date.now()): boolean {
   if (!lastSmsAt) return true;
   return now - lastSmsAt.getTime() >= smsIntervalMs(etaMinutes);
 }
+

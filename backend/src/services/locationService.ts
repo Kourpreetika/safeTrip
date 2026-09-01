@@ -3,7 +3,7 @@ import { getIO } from "../socket.ts";
 import { DEVIATION_STREAK_REQUIRED, isAtDestination, isOffRoute, type LatLng } from "../lib/geo.ts";
 import { findRegisteredContactUserIds, notifyUsers } from "./notificationService.ts";
 import { fetchLiveRoute } from "./routingService.ts";
-import { formatJourneySms, sendSms, shouldSendScheduledSms, isSmsConfigured } from "./smsService.ts";
+import { formatTripSms, sendSmsToNumbers, shouldSendScheduledSms, isSmsConfigured, type SmsSendResult } from "./smsService.ts";
 import { config } from "../config.ts";
 
 function parseRoute(json: string | null): LatLng[] {
@@ -46,7 +46,12 @@ export async function sendJourneySms(params: {
   journey: {
     id: string;
     shareToken: string;
+    startAddress: string;
     destAddress: string;
+    driverName?: string | null;
+    vehicleNumber?: string | null;
+    rideProvider?: string | null;
+    rideId?: string | null;
     etaMinutes: number | null;
     currentLat: number | null;
     currentLng: number | null;
@@ -55,36 +60,41 @@ export async function sendJourneySms(params: {
   };
   status: string;
   force: boolean;
-}) {
-  if (!isSmsConfigured()) return;
+}): Promise<SmsSendResult> {
+  const phones = params.journey.contacts.map((row) => row.contact.phone).filter(Boolean);
+  if (!isSmsConfigured()) {
+    return { configured: false, sent: 0, failed: phones.length };
+  }
   const last = await prisma.journey.findUnique({
     where: { id: params.journey.id },
     select: { lastSmsAt: true, etaMinutes: true },
   });
   if (!params.force && last?.lastSmsAt && !shouldSendScheduledSms(last.lastSmsAt, last.etaMinutes)) {
-    return;
+    return { configured: true, sent: 0, failed: 0 };
   }
-  const trackUrl = `${config.clientOrigin}/track/${params.journey.shareToken}`;
-  const body = formatJourneySms({
+  const trackUrl = `${config.clientOrigin.replace(/\/+$/, "")}/track/${params.journey.shareToken}`;
+  const body = formatTripSms({
     userName: params.journey.user.name,
     status: params.status,
+    startAddress: params.journey.startAddress,
     destAddress: params.journey.destAddress,
+    driverName: params.journey.driverName,
+    vehicleNumber: params.journey.vehicleNumber,
+    rideProvider: params.journey.rideProvider,
+    rideId: params.journey.rideId,
     etaMinutes: params.journey.etaMinutes,
     lat: params.journey.currentLat,
     lng: params.journey.currentLng,
     trackUrl,
-    updatedAt: new Date(),
   });
-  let sent = 0;
-  for (const row of params.journey.contacts) {
-    if (await sendSms(row.contact.phone, body)) sent += 1;
-  }
-  if (sent > 0) {
+  const result = await sendSmsToNumbers(phones, body);
+  if (result.sent > 0) {
     await prisma.journey.update({
       where: { id: params.journey.id },
       data: { lastSmsAt: new Date() },
     });
   }
+  return result;
 }
 
 export async function recordLocation(params: {
@@ -129,6 +139,7 @@ export async function recordLocation(params: {
   }
   const justDeviated = !journey.offRoute && offRouteStreak >= DEVIATION_STREAK_REQUIRED;
   if (justDeviated) offRoute = true;
+  const hadRouteDeviation = journey.hadRouteDeviation || justDeviated || offRoute;
 
   const arrived = isAtDestination(point, dest);
 
@@ -173,6 +184,7 @@ export async function recordLocation(params: {
       routeDistanceMeters,
       lastRouteRefreshAt: refresh.tried ? new Date() : journey.lastRouteRefreshAt,
       offRoute,
+      hadRouteDeviation,
       offRouteStreak,
       ...(arrived ? { status: "completed", completedAt: new Date(), sosActive: false } : {}),
     },
@@ -224,7 +236,7 @@ export async function recordLocation(params: {
     await sendJourneySms({
       journey: { ...journey, etaMinutes: updated.etaMinutes, currentLat: params.lat, currentLng: params.lng },
       status: journey.sosActive ? "SOS" : offRoute ? "Off route" : "On the way",
-      force: false,
+      force: justDeviated,
     });
   }
 

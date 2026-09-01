@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { isAllowedOrigin } from "./config.ts";
+import { isSmsConfigured } from "./services/smsService.ts";
 import { errorHandler } from "./middleware/error.ts";
 import authRoutes from "./routes/auth.ts";
 import contactRoutes from "./routes/contacts.ts";
@@ -27,7 +28,7 @@ export function createApp() {
   app.use(cookieParser());
 
   app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, service: "safetrip-api" });
+    res.json({ ok: true, service: "safetrip-api", smsConfigured: isSmsConfigured() });
   });
 
   app.use("/api/auth", authRoutes);
