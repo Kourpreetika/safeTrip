@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import { config } from "./config.ts";
+import { isAllowedOrigin } from "./config.ts";
 import { errorHandler } from "./middleware/error.ts";
 import authRoutes from "./routes/auth.ts";
 import contactRoutes from "./routes/contacts.ts";
@@ -17,7 +17,9 @@ export function createApp() {
   app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
   app.use(
     cors({
-      origin: config.clientOrigin,
+      origin(origin, callback) {
+        callback(null, isAllowedOrigin(origin));
+      },
       credentials: true,
     }),
   );

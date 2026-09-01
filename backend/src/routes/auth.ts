@@ -4,14 +4,30 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.ts";
 import { asyncHandler } from "../middleware/error.ts";
 import { clearAuthCookie, requireAuth, setAuthCookie, signToken, type AuthedRequest } from "../middleware/auth.ts";
+import { indianMobileSchemaMessage, normalizeIndianMobile } from "../lib/phone.ts";
 
 const router = Router();
 
+const optionalPhone = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z
+    .string()
+    .trim()
+    .optional()
+    .refine((value) => value === undefined || normalizeIndianMobile(value) !== null, indianMobileSchemaMessage())
+    .transform((value) => (value ? normalizeIndianMobile(value) : undefined)),
+);
+
 const registerSchema = z.object({
-  name: z.string().trim().min(2).max(80),
-  email: z.string().trim().email().toLowerCase(),
-  password: z.string().min(8).max(72).regex(/[A-Za-z]/, "Password must include a letter").regex(/\d/, "Password must include a number"),
-  phone: z.string().trim().min(10).max(16).optional(),
+  name: z.string().trim().min(2, "Name must be at least 2 characters.").max(80),
+  email: z.string().trim().email("Enter a valid email address.").toLowerCase(),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters.")
+    .max(72)
+    .regex(/[A-Za-z]/, "Password must include a letter.")
+    .regex(/\d/, "Password must include a number."),
+  phone: optionalPhone,
 });
 
 const loginSchema = z.object({

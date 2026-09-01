@@ -13,15 +13,23 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}${path}`, {
+  const send = () =>
+    fetch(`${API_BASE}${path}`, {
       ...init,
       headers,
       credentials: "include",
     });
+
+  let res: Response;
+  try {
+    res = await send();
   } catch {
-    throw new ApiError("Network error. Check your connection and try again.", 0);
+    await new Promise((r) => setTimeout(r, 2500));
+    try {
+      res = await send();
+    } catch {
+      throw new ApiError("Could not reach SafeTrip. Wait a moment and try again.", 0);
+    }
   }
   const data = (await res.json().catch(() => ({}))) as { error?: string } & T;
   if (!res.ok) {

@@ -13,16 +13,24 @@ export function RegisterPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    setError(null);
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+      setError("Password must be at least 8 characters, with one letter and one number.");
+      return;
+    }
     setBusy(true);
     try {
-      await register({ name, email, password, phone: phone || undefined });
+      await register({ name, email, password, phone: phone.trim() || undefined });
       navigate("/app");
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : "Could not create the account.", "err");
+      const message = err instanceof ApiError ? err.message : "Could not create the account.";
+      setError(message);
+      toast(message, "err");
     } finally {
       setBusy(false);
     }
@@ -74,6 +82,8 @@ export function RegisterPage() {
             required
           />
           <p className="mt-1.5 text-xs text-muted">At least 8 characters, with one letter and one number.</p>
+
+          {error ? <p className="mt-4 text-sm font-medium text-sos">{error}</p> : null}
 
           <button type="submit" disabled={busy} className="btn-primary mt-6 w-full">
             {busy ? "Please wait…" : "Create account"}

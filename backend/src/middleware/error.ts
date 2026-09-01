@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof ZodError) {
     res.status(400).json({
-      error: "Please check the highlighted fields.",
+      error: err.issues[0]?.message ?? "Please check your details and try again.",
       details: err.flatten(),
     });
     return;

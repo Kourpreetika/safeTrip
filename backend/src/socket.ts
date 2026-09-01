@@ -1,14 +1,14 @@
 import type { Server as HttpServer } from "node:http";
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
-import { config } from "./config.ts";
+import { config, isAllowedOrigin } from "./config.ts";
 
 let io: Server | null = null;
 
 export function initSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     cors: {
-      origin: config.clientOrigin,
+      origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
       credentials: true,
     },
   });
