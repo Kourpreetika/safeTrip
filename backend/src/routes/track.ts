@@ -41,6 +41,7 @@ router.get("/:token", async (req, res) => {
       etaMinutes: journey.etaMinutes,
       etaSource: journey.etaSource,
       offRoute: journey.offRoute,
+      hadRouteDeviation: journey.hadRouteDeviation,
       plannedRoute: journey.plannedRouteJson ? JSON.parse(journey.plannedRouteJson) : [],
       startedAt: journey.startedAt,
       completedAt: journey.completedAt,

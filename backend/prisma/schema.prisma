@@ -65,6 +65,7 @@ model Journey {
   lastSmsAt            DateTime?
   lastRouteRefreshAt   DateTime?
   offRoute             Boolean   @default(false)
+  hadRouteDeviation    Boolean   @default(false)
   offRouteStreak       Int      @default(0)
   startedAt            DateTime?
   completedAt          DateTime?

@@ -11,7 +11,7 @@ export function HistoryPage() {
   }, []);
 
   const completed = journeys.filter((j) => j.status === "completed");
-  const off = completed.filter((j) => j.offRoute).length;
+  const off = completed.filter((j) => j.hadRouteDeviation || j.offRoute).length;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -54,6 +54,7 @@ export function HistoryPage() {
               <div className="mt-0.5 text-sm text-muted">
                 {j.driverName} · {j.vehicleNumber}
                 {j.sosEvents && j.sosEvents.length > 0 ? " · SOS was used" : ""}
+                {j.hadRouteDeviation || j.offRoute ? " · left planned route" : ""}
               </div>
             </Link>
           </li>

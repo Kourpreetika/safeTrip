@@ -35,6 +35,7 @@ export type Journey = {
   currentLat?: number | null;
   currentLng?: number | null;
   offRoute: boolean;
+  hadRouteDeviation?: boolean;
   plannedRoute: number[][];
   routeDistanceMeters?: number | null;
   startedAt?: string | null;

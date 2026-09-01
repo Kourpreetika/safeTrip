@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.ts";
 import { getIO } from "../socket.ts";
+import { normalizeIndianMobile } from "../lib/phone.ts";
 
 export type NotificationType =
   | "JOURNEY_STARTED"
@@ -29,13 +30,38 @@ export async function notifyUsers(
   }
 }
 
-/** If a contact's email matches a registered user, send them an in-app notification. */
-export async function findRegisteredContactUserIds(emails: (string | null | undefined)[]): Promise<string[]> {
-  const cleaned = emails.map((e) => e?.trim().toLowerCase()).filter((e): e is string => Boolean(e));
-  if (cleaned.length === 0) return [];
+/** Match a trusted contact to a SafeTrip account by email or Indian mobile. */
+export async function findRegisteredContactUserIds(
+  emails: (string | null | undefined)[],
+  phones: (string | null | undefined)[] = [],
+): Promise<string[]> {
+  const cleanedEmails = emails.map((e) => e?.trim().toLowerCase()).filter((e): e is string => Boolean(e));
+  const cleanedPhones = [
+    ...new Set(phones.map((p) => (p ? normalizeIndianMobile(p) : null)).filter((p): p is string => Boolean(p))),
+  ];
+  if (cleanedEmails.length === 0 && cleanedPhones.length === 0) return [];
   const users = await prisma.user.findMany({
-    where: { email: { in: cleaned } },
+    where: {
+      OR: [
+        ...(cleanedEmails.length ? [{ email: { in: cleanedEmails } }] : []),
+        ...(cleanedPhones.length ? [{ phone: { in: cleanedPhones } }] : []),
+      ],
+    },
     select: { id: true },
   });
   return users.map((u) => u.id);
+}
+
+export async function notifyJourneyContacts(
+  travelerUserId: string,
+  contacts: Array<{ contact: { email?: string | null; phone?: string | null } }>,
+  data: { type: NotificationType; title: string; body: string; payload?: unknown },
+) {
+  const ids = (
+    await findRegisteredContactUserIds(
+      contacts.map((c) => c.contact.email),
+      contacts.map((c) => c.contact.phone),
+    )
+  ).filter((id) => id !== travelerUserId);
+  await notifyUsers(ids, data);
 }
