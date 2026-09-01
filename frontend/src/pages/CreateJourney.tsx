@@ -1,10 +1,12 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowUpDown } from "lucide-react";
 import { api } from "../api/client";
 import { PlaceSearch } from "../components/PlaceSearch";
 import { MapView } from "../components/MapView";
 import { useToast } from "../context/ToastContext";
 import { ApiError } from "../api/client";
+import { reverseIndiaPlace, type Place } from "../lib/places";
 import type { Contact, Journey } from "../types";
 
 type RouteInfo = {
@@ -41,7 +43,10 @@ export function CreateJourneyPage() {
   }, []);
 
   useEffect(() => {
-    if (!start || !dest) return;
+    if (!start || !dest) {
+      setRoute(null);
+      return;
+    }
     setRouteError(null);
     void api<RouteInfo>(
       `/api/geo/route?fromLat=${start.lat}&fromLng=${start.lng}&toLat=${dest.lat}&toLng=${dest.lng}`,
@@ -56,40 +61,62 @@ export function CreateJourneyPage() {
       });
   }, [start, dest]);
 
-  function useMyLocation() {
-    if (!navigator.geolocation) {
-      setGpsMsg("GPS is not available in this browser. Type a start address instead.");
+  function applyPickup(place: Place | null) {
+    if (!place) {
+      setStart(null);
       return;
     }
+    setStart({ lat: place.lat, lng: place.lng });
+    setStartAddress(place.label);
+    setGpsMsg(null);
+  }
+
+  function applyDrop(place: Place | null) {
+    if (!place) {
+      setDest(null);
+      return;
+    }
+    setDest({ lat: place.lat, lng: place.lng });
+    setDestAddress(place.label);
+  }
+
+  function swapLocations() {
+    setStartAddress(destAddress);
+    setDestAddress(startAddress);
+    setStart(dest);
+    setDest(start);
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      setGpsMsg("GPS is not available in this browser. Search for a pickup instead.");
+      return;
+    }
+    setGpsMsg("Reading your location…");
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        setStart({ lat, lng });
-        const rev = await api<{ label: string }>(`/api/geo/reverse?lat=${lat}&lng=${lng}`).catch(() => ({
-          label: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-        }));
-        setStartAddress(rev.label);
-        setGpsMsg(null);
+        const label = await reverseIndiaPlace(lat, lng);
+        applyPickup({ label, title: "Current location", subtitle: label, lat, lng });
       },
       (err) => {
         if (err.code === err.PERMISSION_DENIED) {
-          setGpsMsg(
-            "Location permission denied. Click the lock or info icon next to the address bar, allow Location, then try again — or search for a start address.",
-          );
+          setGpsMsg("Location permission denied. Allow Location for this site, or type a pickup area / PIN.");
         } else if (err.code === err.TIMEOUT) {
-          setGpsMsg("Location request timed out. Turn on GPS, then try again or search for a start address.");
+          setGpsMsg("Location request timed out. Turn on GPS, or search for a pickup.");
         } else {
-          setGpsMsg("Could not read GPS. Search for a start address instead.");
+          setGpsMsg("Could not read GPS. Search for a pickup instead.");
         }
       },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 },
     );
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!start || !dest) {
-      toast("Please select a start location and a destination.", "warn");
+      toast("Select a pickup and a drop from the suggestion list.", "warn");
       return;
     }
     if (!route?.durationMin || !route.coordinates?.length) {
@@ -134,29 +161,45 @@ export function CreateJourneyPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="page-title">Create Journey</h1>
-      <p className="page-lead">Search any place in India — including PIN codes — then add ride details.</p>
+      <p className="page-lead">Type a pickup and drop, then tap a suggestion — anywhere in India, including PIN codes.</p>
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
-        <div className="card space-y-4 p-5">
+        <div className="card relative space-y-4 p-5">
           <PlaceSearch
-            label="Starting location"
+            label="Pickup"
+            variant="pickup"
             value={startAddress}
             onChange={setStartAddress}
-            onSelect={(p) => setStart({ lat: p.lat, lng: p.lng })}
-            placeholder="City, area, village, or PIN code"
+            onSelect={applyPickup}
+            locked={!!start}
+            placeholder="Search pickup — area, landmark, or PIN"
+            onUseCurrentLocation={useMyLocation}
           />
-          <div>
-            <button type="button" onClick={useMyLocation} className="link text-sm">
-              Use my current location
-            </button>
-            {gpsMsg && <p className="mt-2 text-sm text-sos">{gpsMsg}</p>}
-          </div>
+          <button
+            type="button"
+            className="absolute right-4 top-[4.4rem] z-10 grid h-9 w-9 place-items-center rounded-full border border-line bg-white text-ink shadow-sm hover:bg-surface"
+            onClick={swapLocations}
+            title="Swap pickup and drop"
+            aria-label="Swap pickup and drop"
+          >
+            <ArrowUpDown className="h-4 w-4" />
+          </button>
           <PlaceSearch
-            label="Destination"
+            label="Drop"
+            variant="drop"
             value={destAddress}
             onChange={setDestAddress}
-            onSelect={(p) => setDest({ lat: p.lat, lng: p.lng })}
-            placeholder="City, area, village, or PIN code"
+            onSelect={applyDrop}
+            locked={!!dest}
+            near={start}
+            placeholder="Search drop — area, landmark, or PIN"
           />
+          {gpsMsg && <p className="text-sm text-sos">{gpsMsg}</p>}
+          {startAddress && !start && (
+            <p className="text-xs text-muted">Tap a pickup from the list so we can pin it on the map.</p>
+          )}
+          {destAddress && !dest && (
+            <p className="text-xs text-muted">Tap a drop from the list so we can pin it on the map.</p>
+          )}
         </div>
 
         {start && dest && (
