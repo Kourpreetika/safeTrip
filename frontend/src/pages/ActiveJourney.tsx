@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { MapView } from "../components/MapView";
+import { NotifyContacts } from "../components/NotifyContacts";
 import { useGeolocation } from "../hooks/useGeolocation";
 import { useSocket } from "../hooks/useSocket";
 import { useToast } from "../context/ToastContext";
 import { ApiError } from "../api/client";
 import type { Journey } from "../types";
 import { etaCaption, etaDisplay } from "../lib/eta";
+import { isMobileDevice, openDeviceSms, takePendingNotify, tripNotifyText } from "../lib/tripNotify";
 
 export function ActiveJourneyPage() {
   const { id } = useParams();
@@ -53,6 +55,18 @@ export function ActiveJourneyPage() {
   useEffect(() => {
     void load().catch((err) => toast(err instanceof ApiError ? err.message : "Could not load journey.", "err"));
   }, [id]);
+
+  useEffect(() => {
+    if (!journey || journey.status !== "active") return;
+    const pending = takePendingNotify(journey.id);
+    if (!pending) return;
+    if (isMobileDevice()) {
+      openDeviceSms(pending.phones, pending.body);
+      toast("SMS app opened. Tap Send so your contacts get the trip details.");
+    } else {
+      toast("Tap Send SMS below. On a phone this uses your own SMS pack — no paid gateway.");
+    }
+  }, [journey?.id, journey?.status]);
 
   useEffect(() => {
     if (!live || !fix || !id) return;
@@ -101,9 +115,17 @@ export function ActiveJourneyPage() {
       });
       setConfirmSos(false);
       if (d.sms?.sent) toast(`SOS SMS sent to ${d.sms.sent} contact${d.sms.sent === 1 ? "" : "s"}.`, "err");
-      else if (d.sms && d.sms.configured === false) toast("SOS recorded. SMS is not set up on the server.", "err");
-      else toast("SOS sent to trusted contacts.", "err");
+      else toast("SOS recorded. Tap Send SMS so contacts get it from your phone.", "err");
       await load();
+      const sosBody = tripNotifyText(
+        {
+          ...journey,
+          currentLat: lat,
+          currentLng: lng,
+        },
+        "SOS — needs help now",
+      );
+      if (isMobileDevice()) openDeviceSms(journey.contacts.map((c) => c.phone), sosBody);
     } catch (err) {
       toast(err instanceof ApiError ? err.message : "Could not send SOS.", "err");
     }
@@ -131,9 +153,6 @@ export function ActiveJourneyPage() {
       : journey.status === "completed"
         ? 100
         : 8;
-
-  const trackUrl = `${window.location.origin}/track/${journey.shareToken}`;
-  const wa = `https://wa.me/?text=${encodeURIComponent(`${journey.user?.name ?? "A traveller"} started a SafeTrip journey.\n${journey.startAddress} → ${journey.destAddress}\nDriver: ${journey.driverName}\nVehicle: ${journey.vehicleNumber}\nLive: ${trackUrl}`)}`;
 
   return (
     <div className="mx-auto max-w-3xl pb-8">
@@ -198,12 +217,19 @@ export function ActiveJourneyPage() {
             {journey.contacts.map((c) => (
               <li key={c.id}>
                 {c.name}
-                <span className="text-muted"> · notified</span>
+                <span className="text-muted"> · {c.phone}</span>
               </li>
             ))}
           </ul>
         </div>
       </div>
+
+      {journey.status === "active" && (
+        <NotifyContacts
+          contacts={journey.contacts}
+          body={tripNotifyText(journey, journey.sosActive ? "SOS — needs help now" : "Trip started")}
+        />
+      )}
 
       {journey.status === "active" && (
         <>
@@ -221,7 +247,7 @@ export function ActiveJourneyPage() {
             <button type="button" onClick={endJourney} className="btn-dark py-3">
               End journey
             </button>
-            <a href={wa} target="_blank" rel="noreferrer" className="btn-muted py-3">
+            <a href={`https://wa.me/?text=${encodeURIComponent(tripNotifyText(journey, "Trip started"))}`} target="_blank" rel="noreferrer" className="btn-muted py-3">
               Share on WhatsApp
             </a>
           </section>
@@ -239,7 +265,7 @@ export function ActiveJourneyPage() {
           <div className="card w-full max-w-sm p-6">
             <h2 className="text-xl font-semibold">Send SOS?</h2>
             <p className="mt-2 text-sm text-muted">
-              Trusted contacts will receive your live location, driver name, vehicle number, and ride details.
+              Then tap Send SMS so contacts get your live location, driver, and vehicle from your phone.
             </p>
             <button type="button" onClick={() => void triggerSos()} className="btn-sos mt-5 w-full py-3 text-base">
               Send SOS
@@ -255,8 +281,7 @@ export function ActiveJourneyPage() {
         <div className="sos-overlay fixed inset-0 z-[60] flex flex-col items-center justify-center px-6 text-center text-white">
           <h2 className="text-4xl font-bold">SOS is active</h2>
           <p className="mt-3 max-w-md text-white/90">
-            Location is being shared more frequently. Contacts received your name, vehicle, driver, ride ID, and a map
-            link.
+            Location is being shared more frequently. Use Send SMS / WhatsApp so contacts get your pin and tracking link.
           </p>
           <button type="button" onClick={() => void cancelSos()} className="mt-8 rounded-xl bg-white px-6 py-3 font-semibold text-sos hover:bg-surface">
             Cancel SOS (sent by mistake)

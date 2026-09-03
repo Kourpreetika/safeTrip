@@ -7,6 +7,7 @@ import { MapView } from "../components/MapView";
 import { useToast } from "../context/ToastContext";
 import { ApiError } from "../api/client";
 import { reverseIndiaPlace, type Place } from "../lib/places";
+import { queuePendingNotify, tripNotifyText } from "../lib/tripNotify";
 import type { Contact, Journey } from "../types";
 
 type RouteInfo = {
@@ -152,14 +153,15 @@ export function CreateJourneyPage() {
         journey: Journey;
         sms?: { configured: boolean; sent: number; failed: number };
       }>(`/api/journeys/${created.journey.id}/start`, { method: "POST" });
+      queuePendingNotify({
+        journeyId: started.journey.id,
+        phones: started.journey.contacts.map((c) => c.phone),
+        body: tripNotifyText(started.journey, "Trip started"),
+      });
       if (started.sms?.sent) {
-        toast(`Journey started. Trip SMS sent to ${started.sms.sent} contact${started.sms.sent === 1 ? "" : "s"}.`);
-      } else if (started.sms && !started.sms.configured) {
-        toast("Journey started. SMS is not set up on the server, so contacts were not texted.", "warn");
-      } else if (started.sms?.failed) {
-        toast("Journey started. Could not send SMS. Check contact numbers and the SMS key.", "warn");
+        toast(`Journey started. Server SMS sent to ${started.sms.sent} contact${started.sms.sent === 1 ? "" : "s"}.`);
       } else {
-        toast("Journey started.");
+        toast("Journey started. On the next screen, tap Send SMS (free — uses your phone).");
       }
       navigate(`/app/journey/${started.journey.id}`);
     } catch (err) {
