@@ -158,11 +158,7 @@ export function CreateJourneyPage() {
         phones: started.journey.contacts.map((c) => c.phone),
         body: tripNotifyText(started.journey, "Trip started"),
       });
-      if (started.sms?.sent) {
-        toast(`Journey started. Server SMS sent to ${started.sms.sent} contact${started.sms.sent === 1 ? "" : "s"}.`);
-      } else {
-        toast("Journey started. On the next screen, tap Send SMS (free — uses your phone).");
-      }
+      toast("Journey started. WhatsApp will open — tap Send to notify your contacts.");
       navigate(`/app/journey/${started.journey.id}`);
     } catch (err) {
       toast(err instanceof ApiError ? err.message : "Could not start the journey.", "err");

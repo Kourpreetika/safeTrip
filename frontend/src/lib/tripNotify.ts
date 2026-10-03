@@ -79,6 +79,17 @@ export function whatsappHref(phone: string, body: string): string {
   return `https://wa.me/${indiaWhatsAppNumber(phone)}?text=${encodeURIComponent(body)}`;
 }
 
+export function whatsappShareHref(body: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(body)}`;
+}
+
+/** Opens WhatsApp to the first contact (or the share sheet if there is no number). Extra contacts stay as tap-to-send links. */
+export function openWhatsApp(phones: string[], body: string) {
+  const first = phones[0];
+  const href = first ? whatsappHref(first, body) : whatsappShareHref(body);
+  window.open(href, "_blank", "noopener,noreferrer");
+}
+
 export function queuePendingNotify(payload: PendingNotify) {
   sessionStorage.setItem(PENDING_KEY, JSON.stringify(payload));
 }

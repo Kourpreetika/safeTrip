@@ -14,7 +14,7 @@ const features = [
   {
     icon: Users,
     title: "Trusted Contacts",
-    text: "Choose who is notified when a journey starts, ends, or needs help — family, friends, or anyone you trust.",
+    text: "Choose who gets a WhatsApp message when a journey starts, goes off-route, or needs SOS.",
   },
   {
     icon: Clock,
@@ -29,7 +29,7 @@ const features = [
   {
     icon: ShieldAlert,
     title: "One-Tap SOS",
-    text: "Sends your live location plus driver name and vehicle number. Cancel anytime if it was a mistake.",
+    text: "Sends a WhatsApp with your live location plus driver name and vehicle number. Cancel anytime if it was a mistake.",
   },
 ];
 
@@ -37,7 +37,7 @@ const steps = [
   {
     n: "1",
     title: "Add trusted contacts",
-    text: "Save the people you trust, with a phone number and optional email for alerts.",
+    text: "Save the people you trust with their WhatsApp / mobile number.",
   },
   {
     n: "2",
@@ -47,12 +47,12 @@ const steps = [
   {
     n: "3",
     title: "Stay connected",
-    text: "Contacts follow the live map and ETA. Share a private tracking link if someone does not have an account.",
+    text: "WhatsApp them the live map link. They do not need an account to watch the trip.",
   },
   {
     n: "4",
     title: "Use SOS if you need help",
-    text: "One tap alerts your contacts with location and ride details. Cancel anytime if it was accidental.",
+    text: "One tap opens WhatsApp with your location, driver, and vehicle. Cancel anytime if it was accidental.",
   },
 ];
 

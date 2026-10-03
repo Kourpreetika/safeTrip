@@ -9,7 +9,7 @@ import { useToast } from "../context/ToastContext";
 import { ApiError } from "../api/client";
 import type { Journey } from "../types";
 import { etaCaption, etaDisplay } from "../lib/eta";
-import { isMobileDevice, openDeviceSms, takePendingNotify, tripNotifyText } from "../lib/tripNotify";
+import { openWhatsApp, takePendingNotify, tripNotifyText } from "../lib/tripNotify";
 
 export function ActiveJourneyPage() {
   const { id } = useParams();
@@ -60,12 +60,12 @@ export function ActiveJourneyPage() {
     if (!journey || journey.status !== "active") return;
     const pending = takePendingNotify(journey.id);
     if (!pending) return;
-    if (isMobileDevice()) {
-      openDeviceSms(pending.phones, pending.body);
-      toast("SMS app opened. Tap Send so your contacts get the trip details.");
-    } else {
-      toast("Tap Send SMS below. On a phone this uses your own SMS pack — no paid gateway.");
-    }
+    openWhatsApp(pending.phones, pending.body);
+    toast(
+      pending.phones.length > 1
+        ? "WhatsApp opened. Tap Send, then WhatsApp the other contacts below."
+        : "WhatsApp opened. Tap Send so your contact gets the trip details.",
+    );
   }, [journey?.id, journey?.status]);
 
   useEffect(() => {
@@ -109,13 +109,12 @@ export function ActiveJourneyPage() {
       return;
     }
     try {
-      const d = await api<{ sms?: { sent?: number; configured?: boolean } }>(`/api/journeys/${id}/sos`, {
+      await api(`/api/journeys/${id}/sos`, {
         method: "POST",
         body: JSON.stringify({ lat, lng }),
       });
       setConfirmSos(false);
-      if (d.sms?.sent) toast(`SOS SMS sent to ${d.sms.sent} contact${d.sms.sent === 1 ? "" : "s"}.`, "err");
-      else toast("SOS recorded. Tap Send SMS so contacts get it from your phone.", "err");
+      toast("SOS recorded. WhatsApp is opening — tap Send so contacts get your location.", "err");
       await load();
       const sosBody = tripNotifyText(
         {
@@ -125,7 +124,7 @@ export function ActiveJourneyPage() {
         },
         "SOS — needs help now",
       );
-      if (isMobileDevice()) openDeviceSms(journey.contacts.map((c) => c.phone), sosBody);
+      openWhatsApp(journey.contacts.map((c) => c.phone), sosBody);
     } catch (err) {
       toast(err instanceof ApiError ? err.message : "Could not send SOS.", "err");
     }
@@ -236,7 +235,7 @@ export function ActiveJourneyPage() {
           <section className="mt-6 rounded-xl border border-red-200 bg-white p-4 shadow-card">
             <h2 className="text-sm font-semibold text-ink">Emergency</h2>
             <p className="mt-1 text-sm text-muted">
-              SOS alerts your selected contacts with live location, driver name, and vehicle number.
+              SOS opens WhatsApp with your live location, driver name, and vehicle number. Tap Send.
             </p>
             <button type="button" onClick={() => setConfirmSos(true)} className="btn-sos mt-4 w-full">
               SOS
@@ -265,7 +264,7 @@ export function ActiveJourneyPage() {
           <div className="card w-full max-w-sm p-6">
             <h2 className="text-xl font-semibold">Send SOS?</h2>
             <p className="mt-2 text-sm text-muted">
-              Then tap Send SMS so contacts get your live location, driver, and vehicle from your phone.
+              WhatsApp will open with your live location, driver, and vehicle. Tap Send.
             </p>
             <button type="button" onClick={() => void triggerSos()} className="btn-sos mt-5 w-full py-3 text-base">
               Send SOS
@@ -281,7 +280,7 @@ export function ActiveJourneyPage() {
         <div className="sos-overlay fixed inset-0 z-[60] flex flex-col items-center justify-center px-6 text-center text-white">
           <h2 className="text-4xl font-bold">SOS is active</h2>
           <p className="mt-3 max-w-md text-white/90">
-            Location is being shared more frequently. Use Send SMS / WhatsApp so contacts get your pin and tracking link.
+            Location is being shared more frequently. Send the SOS on WhatsApp if it did not open.
           </p>
           <button type="button" onClick={() => void cancelSos()} className="mt-8 rounded-xl bg-white px-6 py-3 font-semibold text-sos hover:bg-surface">
             Cancel SOS (sent by mistake)

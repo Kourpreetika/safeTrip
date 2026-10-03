@@ -1,6 +1,6 @@
 import { prisma } from "../lib/prisma.ts";
 import { getIO } from "../socket.ts";
-import { findRegisteredContactUserIds, notifyUsers } from "./notificationService.ts";
+import { notifyJourneyContacts } from "./notificationService.ts";
 import { sendJourneySms } from "./locationService.ts";
 
 export function mapsLink(lat: number, lng: number): string {
@@ -67,9 +67,7 @@ export async function triggerSos(params: {
     userName: journey.user.name,
   };
 
-  const contactEmails = journey.contacts.map((c) => c.contact.email);
-  const recipientIds = (await findRegisteredContactUserIds(contactEmails)).filter((id) => id !== params.userId);
-  await notifyUsers(recipientIds, {
+  await notifyJourneyContacts(params.userId, journey.contacts, {
     type: "SOS_TRIGGERED",
     title: `SOS from ${journey.user.name}`,
     body,
@@ -116,11 +114,7 @@ export async function cancelSos(params: { journeyId: string; userId: string }) {
     data: { sosActive: false },
   });
 
-  const recipientIds = (
-    await findRegisteredContactUserIds(journey.contacts.map((c) => c.contact.email))
-  ).filter((id) => id !== params.userId);
-
-  await notifyUsers(recipientIds, {
+  await notifyJourneyContacts(params.userId, journey.contacts, {
     type: "SOS_CANCELLED",
     title: `SOS cancelled by ${journey.user.name}`,
     body: "The emergency alert was cancelled. The journey is still being tracked.",

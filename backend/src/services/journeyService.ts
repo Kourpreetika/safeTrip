@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { prisma } from "../lib/prisma.ts";
 import { getIO } from "../socket.ts";
-import { findRegisteredContactUserIds, notifyUsers } from "./notificationService.ts";
+import { notifyJourneyContacts } from "./notificationService.ts";
 import { config } from "../config.ts";
 import { sendJourneySms } from "./locationService.ts";
 import { isSmsConfigured, type SmsSendResult } from "./smsService.ts";
@@ -104,11 +104,7 @@ export async function startJourney(params: { journeyId: string; userId: string }
   });
 
   const trackUrl = `${config.clientOrigin.replace(/\/+$/, "")}/track/${updated.shareToken}`;
-  const recipientIds = (
-    await findRegisteredContactUserIds(updated.contacts.map((c) => c.contact.email))
-  ).filter((id) => id !== params.userId);
-
-  await notifyUsers(recipientIds, {
+  await notifyJourneyContacts(params.userId, updated.contacts, {
     type: "JOURNEY_STARTED",
     title: `${journey.user.name} started a journey`,
     body: `${journey.startAddress} → ${journey.destAddress}. Vehicle ${updated.vehicleNumber}. Live track: ${trackUrl}`,

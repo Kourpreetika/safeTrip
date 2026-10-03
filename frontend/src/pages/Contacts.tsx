@@ -63,7 +63,7 @@ export function ContactsPage() {
     <div className="mx-auto max-w-2xl">
       <h1 className="page-title">Trusted Contacts</h1>
       <p className="page-lead">
-        Save people you trust. When a trip starts, you send them pickup, drop, driver, vehicle, and a live tracking link as a free SMS from your phone, or on WhatsApp.
+        Save people you trust. When a trip starts, WhatsApp opens with pickup, drop, driver, vehicle, and a live tracking link — tap Send.
       </p>
       <form onSubmit={onSubmit} className="card mt-6 space-y-4 p-5">
         <label>

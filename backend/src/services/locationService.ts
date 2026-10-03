@@ -1,7 +1,7 @@
 import { prisma } from "../lib/prisma.ts";
 import { getIO } from "../socket.ts";
 import { DEVIATION_STREAK_REQUIRED, isAtDestination, isOffRoute, type LatLng } from "../lib/geo.ts";
-import { findRegisteredContactUserIds, notifyUsers } from "./notificationService.ts";
+import { notifyJourneyContacts } from "./notificationService.ts";
 import { fetchLiveRoute } from "./routingService.ts";
 import { formatTripSms, sendSmsToNumbers, shouldSendScheduledSms, isSmsConfigured, type SmsSendResult } from "./smsService.ts";
 import { config } from "../config.ts";
@@ -205,12 +205,8 @@ export async function recordLocation(params: {
   getIO().to(`track:${journey.shareToken}`).emit("location:update", payload);
   getIO().to(`journey:${journey.id}`).emit("location:update", payload);
 
-  const recipientIds = (
-    await findRegisteredContactUserIds(journey.contacts.map((c) => c.contact.email))
-  ).filter((id) => id !== params.userId);
-
   if (justDeviated) {
-    await notifyUsers(recipientIds, {
+    await notifyJourneyContacts(params.userId, journey.contacts, {
       type: "ROUTE_DEVIATION",
       title: `${journey.user.name} may be off the planned route`,
       body: `The trip toward ${journey.destAddress} left the planned path.`,
@@ -220,7 +216,7 @@ export async function recordLocation(params: {
   }
 
   if (arrived) {
-    await notifyUsers(recipientIds, {
+    await notifyJourneyContacts(params.userId, journey.contacts, {
       type: "JOURNEY_COMPLETED",
       title: `${journey.user.name} reached the destination`,
       body: `The journey to ${journey.destAddress} is complete.`,
@@ -263,11 +259,7 @@ export async function completeJourney(params: { journeyId: string; userId: strin
     data: { status: "completed", completedAt: new Date(), sosActive: false },
   });
 
-  const recipientIds = (
-    await findRegisteredContactUserIds(journey.contacts.map((c) => c.contact.email))
-  ).filter((id) => id !== params.userId);
-
-  await notifyUsers(recipientIds, {
+  await notifyJourneyContacts(params.userId, journey.contacts, {
     type: "JOURNEY_COMPLETED",
     title: `${journey.user.name} ended the journey`,
     body:
