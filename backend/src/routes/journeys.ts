@@ -21,7 +21,7 @@ const createSchema = z.object({
   vehicleNumber: z.string().trim().min(4).max(20),
   driverName: z.string().trim().min(2).max(80),
   rideProvider: z.string().trim().max(40).optional(),
-  rideId: z.string().trim().max(40).optional(),
+  rideId: z.string().trim().min(1).max(40),
   estimatedDurationMin: z.number().int().min(1).max(24 * 60),
   contactIds: z.array(z.string().min(1)).min(1),
   plannedRoute: z.array(z.tuple([z.number(), z.number()])).min(2),
@@ -59,10 +59,13 @@ router.get(
       res.json({ journeys: [] });
       return;
     }
+    const contactMatch = me.phone
+      ? { OR: [{ email: me.email }, { phone: me.phone }] }
+      : { email: me.email };
     const links = await prisma.journeyContact.findMany({
       where: {
-        contact: { email: me.email },
-        journey: { status: { in: ["active"] } },
+        contact: contactMatch,
+        journey: { status: "active" },
       },
       include: { journey: { include: journeyInclude } },
     });
@@ -135,16 +138,9 @@ router.post(
   asyncHandler(async (req, res) => {
     const { user } = req as AuthedRequest;
     const { journey, sms } = await startJourney({ journeyId: req.params.id, userId: user.id });
-    const trackUrl = `${config.clientOrigin.replace(/\/+$/, "")}/track/${journey.shareToken}`;
     res.json({
       journey: serializeJourney(journey),
       sms,
-      share: {
-        trackUrl,
-        whatsappText: encodeURIComponent(
-          `${journey.user.name} started a SafeTrip journey.\n${journey.startAddress} → ${journey.destAddress}\nDriver: ${journey.driverName}\nVehicle: ${journey.vehicleNumber}\nLive location: ${trackUrl}`,
-        ),
-      },
     });
   }),
 );

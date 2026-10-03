@@ -63,7 +63,7 @@ export function ContactsPage() {
     <div className="mx-auto max-w-2xl">
       <h1 className="page-title">Trusted Contacts</h1>
       <p className="page-lead">
-        Save people you trust. When a trip starts, WhatsApp opens with pickup, drop, driver, vehicle, and a live tracking link — tap Send.
+        Save someone with the same phone number they used to register. Trip start, off-route, SOS, and arrival then show up in their SafeTrip alerts automatically, at no cost.
       </p>
       <form onSubmit={onSubmit} className="card mt-6 space-y-4 p-5">
         <label>
@@ -87,7 +87,7 @@ export function ContactsPage() {
           <input
             className="input-field"
             type="email"
-            placeholder="Used for in-app alerts if they have an account"
+            placeholder="Optional. Alerts also match this email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -126,6 +126,11 @@ export function ContactsPage() {
               <div className="text-sm text-muted">
                 {c.relationship ? `${c.relationship} · ` : ""}
                 {c.phone}
+              </div>
+              <div className={`mt-1 text-xs font-medium ${c.alertsEnabled ? "text-ink" : "text-muted"}`}>
+                {c.alertsEnabled
+                  ? "Automatic alerts on"
+                  : "No SafeTrip account on this number yet"}
               </div>
             </div>
             <div className="flex gap-3 text-sm">

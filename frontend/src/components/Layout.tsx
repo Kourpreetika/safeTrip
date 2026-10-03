@@ -1,7 +1,10 @@
 import { Bell, History, Home, LogOut, MapPinned, Menu, User, Users, X } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { api } from "../api/client";
+import { SOCKET_URL } from "../lib/apiBase";
 import { useEffect, useState, type ReactNode } from "react";
 import type { AppNotification } from "../types";
 import { BrandMark } from "./BrandMark";
@@ -216,6 +219,7 @@ export function GuestShell({ children }: { children: ReactNode }) {
 
 export function AppLayout() {
   const { user, logout } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [notes, setNotes] = useState<AppNotification[]>([]);
@@ -229,10 +233,25 @@ export function AppLayout() {
   }, [location.pathname]);
 
   useEffect(() => {
-    void api<{ notifications: AppNotification[] }>("/api/notifications")
-      .then((d) => setNotes(d.notifications))
-      .catch(() => undefined);
-  }, []);
+    let cancelled = false;
+    function load() {
+      void api<{ notifications: AppNotification[] }>("/api/notifications")
+        .then((d) => {
+          if (!cancelled) setNotes(d.notifications);
+        })
+        .catch(() => undefined);
+    }
+    load();
+    const socket = io(SOCKET_URL || undefined, { withCredentials: true });
+    socket.on("notification", (data: { title?: string; type?: string }) => {
+      load();
+      if (data?.title) toast(data.title, data.type === "SOS_TRIGGERED" ? "err" : "ok");
+    });
+    return () => {
+      cancelled = true;
+      socket.disconnect();
+    };
+  }, [toast]);
 
   async function signOut() {
     setMenuOpen(false);

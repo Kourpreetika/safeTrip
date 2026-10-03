@@ -163,6 +163,10 @@ body {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.input-field.has-trailing-icon {
+  padding-right: 2.5rem;
+}
+
 .input-field::placeholder {
   color: #9ca3af;
 }

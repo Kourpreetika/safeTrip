@@ -8,7 +8,6 @@ type Props = {
   onChange: (v: string) => void;
   onSelect: (place: Place | null) => void;
   placeholder?: string;
-  variant?: "pickup" | "drop";
   locked?: boolean;
   near?: { lat: number; lng: number } | null;
   onUseCurrentLocation?: () => void;
@@ -20,7 +19,6 @@ export function PlaceSearch({
   onChange,
   onSelect,
   placeholder,
-  variant = "drop",
   locked = false,
   near,
   onUseCurrentLocation,
@@ -116,18 +114,13 @@ export function PlaceSearch({
     <div ref={rootRef} className="relative">
       <span className="field-label">{label}</span>
       <div className="relative">
-        <span
-          className={`pointer-events-none absolute left-3 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border-2 ${
-            variant === "pickup" ? "border-header bg-primary" : "border-header bg-header"
-          }`}
-        />
         <input
           value={value}
           onChange={(e) => onType(e.target.value)}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className="input-field pl-9 pr-10"
+          className={`input-field ${loading || locked ? "has-trailing-icon" : ""}`}
           autoComplete="off"
           role="combobox"
           aria-expanded={showMenu}

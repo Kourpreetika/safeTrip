@@ -66,6 +66,7 @@ export function DashboardPage() {
       {incoming.length > 0 && (
         <section className="mt-8">
           <h2 className="text-lg font-semibold text-ink">Journeys you are watching</h2>
+          <p className="mt-1 text-sm text-muted">These arrived automatically because your phone matches a trusted contact.</p>
           <div className="mt-3 space-y-3">
             {incoming.map((j) => (
               <Link key={j.id} to={`/track/${j.shareToken}`} className="card block p-4 transition hover:bg-surface">

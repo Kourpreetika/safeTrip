@@ -8,15 +8,12 @@ import { indianMobileSchemaMessage, normalizeIndianMobile } from "../lib/phone.t
 
 const router = Router();
 
-const optionalPhone = z.preprocess(
-  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
-  z
-    .string()
-    .trim()
-    .optional()
-    .refine((value) => value === undefined || normalizeIndianMobile(value) !== null, indianMobileSchemaMessage())
-    .transform((value) => (value ? normalizeIndianMobile(value) : undefined)),
-);
+const requiredPhone = z
+  .string()
+  .trim()
+  .min(1, indianMobileSchemaMessage())
+  .refine((value) => normalizeIndianMobile(value) !== null, indianMobileSchemaMessage())
+  .transform((value) => normalizeIndianMobile(value) as string);
 
 const registerSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters.").max(80),
@@ -27,7 +24,7 @@ const registerSchema = z.object({
     .max(72)
     .regex(/[A-Za-z]/, "Password must include a letter.")
     .regex(/\d/, "Password must include a number."),
-  phone: optionalPhone,
+  phone: requiredPhone,
 });
 
 const loginSchema = z.object({

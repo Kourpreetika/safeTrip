@@ -2,14 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { MapView } from "../components/MapView";
-import { NotifyContacts } from "../components/NotifyContacts";
 import { useGeolocation } from "../hooks/useGeolocation";
 import { useSocket } from "../hooks/useSocket";
 import { useToast } from "../context/ToastContext";
 import { ApiError } from "../api/client";
 import type { Journey } from "../types";
 import { etaCaption, etaDisplay } from "../lib/eta";
-import { openWhatsApp, takePendingNotify, tripNotifyText } from "../lib/tripNotify";
 
 export function ActiveJourneyPage() {
   const { id } = useParams();
@@ -57,18 +55,6 @@ export function ActiveJourneyPage() {
   }, [id]);
 
   useEffect(() => {
-    if (!journey || journey.status !== "active") return;
-    const pending = takePendingNotify(journey.id);
-    if (!pending) return;
-    openWhatsApp(pending.phones, pending.body);
-    toast(
-      pending.phones.length > 1
-        ? "WhatsApp opened. Tap Send, then WhatsApp the other contacts below."
-        : "WhatsApp opened. Tap Send so your contact gets the trip details.",
-    );
-  }, [journey?.id, journey?.status]);
-
-  useEffect(() => {
     if (!live || !fix || !id) return;
     const now = Date.now();
     if (now - lastPosted.current < interval - 200) return;
@@ -114,17 +100,8 @@ export function ActiveJourneyPage() {
         body: JSON.stringify({ lat, lng }),
       });
       setConfirmSos(false);
-      toast("SOS recorded. WhatsApp is opening — tap Send so contacts get your location.", "err");
+      toast("SOS sent. Trusted contacts were notified in SafeTrip.", "err");
       await load();
-      const sosBody = tripNotifyText(
-        {
-          ...journey,
-          currentLat: lat,
-          currentLng: lng,
-        },
-        "SOS — needs help now",
-      );
-      openWhatsApp(journey.contacts.map((c) => c.phone), sosBody);
     } catch (err) {
       toast(err instanceof ApiError ? err.message : "Could not send SOS.", "err");
     }
@@ -224,32 +201,20 @@ export function ActiveJourneyPage() {
       </div>
 
       {journey.status === "active" && (
-        <NotifyContacts
-          contacts={journey.contacts}
-          body={tripNotifyText(journey, journey.sosActive ? "SOS — needs help now" : "Trip started")}
-        />
-      )}
-
-      {journey.status === "active" && (
         <>
           <section className="mt-6 rounded-xl border border-red-200 bg-white p-4 shadow-card">
             <h2 className="text-sm font-semibold text-ink">Emergency</h2>
             <p className="mt-1 text-sm text-muted">
-              SOS opens WhatsApp with your live location, driver name, and vehicle number. Tap Send.
+              SOS alerts your trusted contacts in SafeTrip with your live location, driver name, and vehicle number.
             </p>
             <button type="button" onClick={() => setConfirmSos(true)} className="btn-sos mt-4 w-full">
               SOS
             </button>
           </section>
 
-          <section className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button type="button" onClick={endJourney} className="btn-dark py-3">
-              End journey
-            </button>
-            <a href={`https://wa.me/?text=${encodeURIComponent(tripNotifyText(journey, "Trip started"))}`} target="_blank" rel="noreferrer" className="btn-muted py-3">
-              Share on WhatsApp
-            </a>
-          </section>
+          <button type="button" onClick={endJourney} className="btn-dark mt-4 w-full py-3">
+            End journey
+          </button>
         </>
       )}
 
@@ -264,7 +229,7 @@ export function ActiveJourneyPage() {
           <div className="card w-full max-w-sm p-6">
             <h2 className="text-xl font-semibold">Send SOS?</h2>
             <p className="mt-2 text-sm text-muted">
-              WhatsApp will open with your live location, driver, and vehicle. Tap Send.
+              Your trusted contacts will get an alert in SafeTrip with your live location, driver, and vehicle.
             </p>
             <button type="button" onClick={() => void triggerSos()} className="btn-sos mt-5 w-full py-3 text-base">
               Send SOS
@@ -280,7 +245,7 @@ export function ActiveJourneyPage() {
         <div className="sos-overlay fixed inset-0 z-[60] flex flex-col items-center justify-center px-6 text-center text-white">
           <h2 className="text-4xl font-bold">SOS is active</h2>
           <p className="mt-3 max-w-md text-white/90">
-            Location is being shared more frequently. Send the SOS on WhatsApp if it did not open.
+            Location is being shared more frequently. Your trusted contacts were alerted in SafeTrip.
           </p>
           <button type="button" onClick={() => void cancelSos()} className="mt-8 rounded-xl bg-white px-6 py-3 font-semibold text-sos hover:bg-surface">
             Cancel SOS (sent by mistake)

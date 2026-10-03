@@ -17,7 +17,7 @@ export async function createJourney(params: {
   vehicleNumber: string;
   driverName: string;
   rideProvider?: string;
-  rideId?: string;
+  rideId: string;
   estimatedDurationMin: number;
   contactIds: string[];
   plannedRoute: number[][];

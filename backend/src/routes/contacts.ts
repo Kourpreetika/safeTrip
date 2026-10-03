@@ -23,7 +23,27 @@ router.get(
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
     });
-    res.json({ contacts });
+    const phones = [...new Set(contacts.map((c) => c.phone))];
+    const emails = [...new Set(contacts.map((c) => c.email).filter((e): e is string => Boolean(e)))];
+    const accounts =
+      phones.length === 0 && emails.length === 0
+        ? []
+        : await prisma.user.findMany({
+            where: {
+              id: { not: user.id },
+              OR: [
+                ...(phones.length ? [{ phone: { in: phones } }] : []),
+                ...(emails.length ? [{ email: { in: emails } }] : []),
+              ],
+            },
+            select: { phone: true, email: true },
+          });
+    res.json({
+      contacts: contacts.map((c) => ({
+        ...c,
+        alertsEnabled: accounts.some((a) => a.phone === c.phone || (c.email != null && a.email === c.email)),
+      })),
+    });
   }),
 );
 

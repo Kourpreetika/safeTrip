@@ -39,7 +39,7 @@ When a person travels alone in a cab, auto, or bike taxi, family members often h
 | Dashboard | Counts of trips, completed journeys, km, SOS events. Link to start a trip. Incoming trips if someone listed you as a contact. |
 | Contacts | Add / edit / remove trusted people (name, phone, optional email). |
 | Create journey | Pickup, destination, driver, vehicle, ride service, contacts. Search real places or use current GPS as start. |
-| Active journey | Live map from the browser Geolocation API, ETA, SOS, cancel SOS, end trip, WhatsApp share. |
+| Active journey | Live map from the browser Geolocation API, ETA, SOS, cancel SOS, end trip. |
 | Public track (`/track/:token`) | Same map for anyone who has the link. No login required. |
 | History | Past journeys with status and whether SOS was used. |
 | Profile | Name and phone. Email cannot be changed. |

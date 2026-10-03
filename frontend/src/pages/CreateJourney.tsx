@@ -7,7 +7,6 @@ import { MapView } from "../components/MapView";
 import { useToast } from "../context/ToastContext";
 import { ApiError } from "../api/client";
 import { reverseIndiaPlace, type Place } from "../lib/places";
-import { queuePendingNotify, tripNotifyText } from "../lib/tripNotify";
 import type { Contact, Journey } from "../types";
 
 type RouteInfo = {
@@ -124,6 +123,10 @@ export function CreateJourneyPage() {
       toast(routeError ?? "Wait for the live ETA to load before starting.", "warn");
       return;
     }
+    if (!rideId.trim()) {
+      toast("Enter the ride ID.", "warn");
+      return;
+    }
     if (selected.length === 0) {
       toast("Select at least one trusted contact.", "warn");
       return;
@@ -142,7 +145,7 @@ export function CreateJourneyPage() {
           vehicleNumber,
           driverName,
           rideProvider,
-          rideId: rideId || undefined,
+          rideId: rideId.trim(),
           estimatedDurationMin: route.durationMin as number,
           contactIds: selected,
           plannedRoute: route.coordinates,
@@ -153,12 +156,7 @@ export function CreateJourneyPage() {
         journey: Journey;
         sms?: { configured: boolean; sent: number; failed: number };
       }>(`/api/journeys/${created.journey.id}/start`, { method: "POST" });
-      queuePendingNotify({
-        journeyId: started.journey.id,
-        phones: started.journey.contacts.map((c) => c.phone),
-        body: tripNotifyText(started.journey, "Trip started"),
-      });
-      toast("Journey started. WhatsApp will open — tap Send to notify your contacts.");
+      toast("Journey started. Trusted contacts with a SafeTrip account were notified.");
       navigate(`/app/journey/${started.journey.id}`);
     } catch (err) {
       toast(err instanceof ApiError ? err.message : "Could not start the journey.", "err");
@@ -175,7 +173,6 @@ export function CreateJourneyPage() {
         <div className="card relative space-y-4 p-5">
           <PlaceSearch
             label="Pickup"
-            variant="pickup"
             value={startAddress}
             onChange={setStartAddress}
             onSelect={applyPickup}
@@ -194,7 +191,6 @@ export function CreateJourneyPage() {
           </button>
           <PlaceSearch
             label="Drop"
-            variant="drop"
             value={destAddress}
             onChange={setDestAddress}
             onSelect={applyDrop}
@@ -252,7 +248,7 @@ export function CreateJourneyPage() {
               <option>Other</option>
             </select>
           </label>
-          <Field label="Ride ID (optional)" value={rideId} onChange={setRideId} />
+          <Field label="Ride ID" value={rideId} onChange={setRideId} required />
         </div>
 
         <div className="card p-5">

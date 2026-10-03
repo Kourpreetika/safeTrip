@@ -5,7 +5,7 @@ const router = Router();
 
 /**
  * Public tracking page. Anyone with the share token can open the map
- * without logging in (for example a WhatsApp link). We only send journey
+ * without logging in (for example a shared tracking link). We only send journey
  * and location fields, not the traveller's email or other contacts' numbers.
  */
 router.get("/:token", async (req, res) => {

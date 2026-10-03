@@ -23,9 +23,15 @@ export function RegisterPage() {
       setError("Password must be at least 8 characters, with one letter and one number.");
       return;
     }
+    const digits = phone.replace(/\D/g, "");
+    const ten = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits.length === 11 && digits.startsWith("0") ? digits.slice(1) : digits;
+    if (!/^[6-9]\d{9}$/.test(ten)) {
+      setError("Enter a valid 10-digit Indian mobile number (starts with 6–9).");
+      return;
+    }
     setBusy(true);
     try {
-      await register({ name, email, password, phone: phone.trim() || undefined });
+      await register({ name, email, password, phone: phone.trim() });
       navigate("/app");
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Could not create the account.";
@@ -63,13 +69,15 @@ export function RegisterPage() {
             required
           />
 
-          <label className="field-label mt-4">Phone (optional)</label>
+          <label className="field-label mt-4">Phone</label>
           <input
             className="input-field"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="+91…"
+            placeholder="10-digit number, e.g. 9876543210"
             autoComplete="tel"
+            inputMode="tel"
+            required
           />
 
           <label className="field-label mt-4">Password</label>

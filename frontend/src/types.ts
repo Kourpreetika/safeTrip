@@ -12,6 +12,7 @@ export type Contact = {
   phone: string;
   email?: string | null;
   relationship?: string | null;
+  alertsEnabled?: boolean;
 };
 
 export type Journey = {

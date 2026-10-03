@@ -14,7 +14,7 @@ const features = [
   {
     icon: Users,
     title: "Trusted Contacts",
-    text: "Choose who gets a WhatsApp message when a journey starts, goes off-route, or needs SOS.",
+    text: "Choose who gets an in-app alert when a journey starts, goes off-route, or needs SOS.",
   },
   {
     icon: Clock,
@@ -29,7 +29,7 @@ const features = [
   {
     icon: ShieldAlert,
     title: "One-Tap SOS",
-    text: "Sends a WhatsApp with your live location plus driver name and vehicle number. Cancel anytime if it was a mistake.",
+    text: "Alerts your trusted contacts in SafeTrip with your live location, driver name, and vehicle number. Cancel anytime if it was a mistake.",
   },
 ];
 
@@ -37,7 +37,7 @@ const steps = [
   {
     n: "1",
     title: "Add trusted contacts",
-    text: "Save the people you trust with their WhatsApp / mobile number.",
+    text: "Save the people you trust with the mobile number they used to register.",
   },
   {
     n: "2",
@@ -47,12 +47,12 @@ const steps = [
   {
     n: "3",
     title: "Stay connected",
-    text: "WhatsApp them the live map link. They do not need an account to watch the trip.",
+    text: "They get the alert in SafeTrip and can open the live map from their dashboard.",
   },
   {
     n: "4",
     title: "Use SOS if you need help",
-    text: "One tap opens WhatsApp with your location, driver, and vehicle. Cancel anytime if it was accidental.",
+    text: "One tap alerts your contacts with your location, driver, and vehicle. Cancel anytime if it was accidental.",
   },
 ];
 
