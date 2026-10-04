@@ -8,6 +8,7 @@ import { useToast } from "../context/ToastContext";
 import { ApiError } from "../api/client";
 import { reverseIndiaPlace, type Place } from "../lib/places";
 import type { Contact, Journey } from "../types";
+import { smsNotice, type SmsResult } from "../lib/smsStatus";
 
 type RouteInfo = {
   coordinates: number[][];
@@ -154,9 +155,10 @@ export function CreateJourneyPage() {
       });
       const started = await api<{
         journey: Journey;
-        sms?: { configured: boolean; sent: number; failed: number };
+        sms?: SmsResult;
       }>(`/api/journeys/${created.journey.id}/start`, { method: "POST" });
-      toast("Journey started. Trusted contacts with a SafeTrip account were notified.");
+      const notice = smsNotice("Journey started.", started.sms);
+      toast(notice.message, notice.kind);
       navigate(`/app/journey/${started.journey.id}`);
     } catch (err) {
       toast(err instanceof ApiError ? err.message : "Could not start the journey.", "err");

@@ -4,7 +4,7 @@ import { getIO } from "../socket.ts";
 import { notifyJourneyContacts } from "./notificationService.ts";
 import { config } from "../config.ts";
 import { sendJourneySms } from "./locationService.ts";
-import { isSmsConfigured, type SmsSendResult } from "./smsService.ts";
+import { emptySmsResult, type SmsSendResult } from "./smsService.ts";
 
 export async function createJourney(params: {
   userId: string;
@@ -79,7 +79,7 @@ export async function startJourney(params: { journeyId: string; userId: string }
     throw err;
   }
   if (journey.status === "active") {
-    return { journey, sms: { configured: isSmsConfigured(), sent: 0, failed: 0 } };
+    return { journey, sms: emptySmsResult() };
   }
 
   const otherActive = await prisma.journey.findFirst({

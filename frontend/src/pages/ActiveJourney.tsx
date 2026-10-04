@@ -95,12 +95,25 @@ export function ActiveJourneyPage() {
       return;
     }
     try {
-      await api(`/api/journeys/${id}/sos`, {
-        method: "POST",
-        body: JSON.stringify({ lat, lng }),
-      });
+      const result = await api<{ sms?: { configured?: boolean; provider?: string; sent?: number; failed?: number; errors?: string[] } }>(
+        `/api/journeys/${id}/sos`,
+        {
+          method: "POST",
+          body: JSON.stringify({ lat, lng }),
+        },
+      );
       setConfirmSos(false);
-      toast("SOS sent. Trusted contacts were notified in SafeTrip.", "err");
+      const sent = result.sms?.sent ?? 0;
+      if (sent > 0) {
+        toast(`SOS sent. SMS went to ${sent} trusted contact${sent === 1 ? "" : "s"}.`, "err");
+      } else if (!result.sms?.configured) {
+        toast("SOS sent in SafeTrip. Add Twilio trial keys on the API to also send SMS.", "err");
+      } else {
+        toast(
+          `SOS sent in SafeTrip. SMS did not send. ${result.sms?.errors?.[0] ?? "Verify contact numbers in Twilio."}`,
+          "err",
+        );
+      }
       await load();
     } catch (err) {
       toast(err instanceof ApiError ? err.message : "Could not send SOS.", "err");

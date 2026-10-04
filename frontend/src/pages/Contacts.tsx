@@ -62,9 +62,7 @@ export function ContactsPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="page-title">Trusted Contacts</h1>
-      <p className="page-lead">
-        Save someone with the same phone number they used to register. Trip start, off-route, SOS, and arrival then show up in their SafeTrip alerts automatically, at no cost.
-      </p>
+      <p className="page-lead">Save people you trust with a valid Indian mobile number so they can be notified on your trips.</p>
       <form onSubmit={onSubmit} className="card mt-6 space-y-4 p-5">
         <label>
           <span className="field-label">Name</span>

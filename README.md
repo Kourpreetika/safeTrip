@@ -126,7 +126,7 @@ Most routes except auth, health, geo, and public track need a logged-in cookie.
 
 **ETA.** The server asks the routing service for the remaining drive from the *current* GPS point to the destination (not a fixed number typed at the start). If `GOOGLE_MAPS_API_KEY` is set, Google Directions is used with `departure_time=now` so the minutes include live traffic, and a faster alternative is chosen when one is returned. If that key is missing or Google fails, OSRM is used (road geometry and typical speeds). If both fail, the last known live ETA is kept and the UI shows “Updating…” instead of a made-up time. The route is refreshed about every 45 seconds (sooner if the user is off the planned path). If a new path is clearly shorter, the map polyline is replaced.
 
-**SMS to trusted contacts.** Contacts must have a valid Indian mobile number (10 digits, starts with 6–9). When SMS is configured (`SMS_PROVIDER=twilio` or `msg91` plus keys in `backend/.env`), the backend sends real SMS with current location, journey status, ETA, destination, last-updated time, and the `/track/...` link. Frequency follows the *latest* ETA:
+**SMS to trusted contacts.** Contacts must have a valid Indian mobile number (10 digits, starts with 6–9). When Twilio (or MSG91) keys are set, the backend sends real SMS with current location, journey status, ETA, destination, last-updated time, and the `/track/...` link. Frequency follows the *latest* ETA:
 
 - under 15 minutes → every 3 minutes
 - 15–40 minutes → every 4 minutes
@@ -168,9 +168,10 @@ npm run dev
 Copy `backend/.env.example` to `backend/.env`. Optional:
 
 - `GOOGLE_MAPS_API_KEY` — Directions API, live traffic ETA (never expose this in the frontend)
-- `SMS_PROVIDER=twilio` plus Twilio SID / token / from-number, **or** `SMS_PROVIDER=msg91` plus MSG91 keys
+- Twilio trial (recommended): `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` (E.164, e.g. `+1…`). On Render, add the same variables and restart. Trial accounts can only text [Verified Caller IDs](https://www.twilio.com/docs/voice/api/verified-caller-ids) — add each contact as `+91XXXXXXXXXX`. Enable SMS to India in Twilio geo permissions if sends are blocked.
+- Or MSG91 keys if you use that provider instead.
 
-If those keys are empty, location search (OpenStreetMap) and OSRM routing still work; SMS is skipped.
+If those keys are empty, location search (OpenStreetMap) and OSRM routing still work; SMS is skipped. `/api/health` reports `smsConfigured` and `smsProvider`.
 
 ### Get started
 

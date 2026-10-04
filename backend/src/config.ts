@@ -35,6 +35,12 @@ export function isAllowedOrigin(origin: string | undefined): boolean {
   return hostname.endsWith(".vercel.app") && hostname.startsWith("safe-trip");
 }
 
+function normalizeTwilioFrom(raw: string): string {
+  const compact = raw.trim().replace(/[^\d+]/g, "");
+  if (!compact) return "";
+  return compact.startsWith("+") ? compact : `+${compact}`;
+}
+
 export const config = {
   port: Number(process.env.PORT ?? 4000),
   clientOrigins,
@@ -44,10 +50,10 @@ export const config = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   appContact: process.env.APP_CONTACT ?? "safetrip@localhost",
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY ?? "",
-  smsProvider: (process.env.SMS_PROVIDER ?? "none").toLowerCase(),
-  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ?? "",
-  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ?? "",
-  twilioFromNumber: process.env.TWILIO_FROM_NUMBER ?? "",
+  smsProvider: (process.env.SMS_PROVIDER ?? "none").toLowerCase().trim(),
+  twilioAccountSid: (process.env.TWILIO_ACCOUNT_SID ?? "").trim(),
+  twilioAuthToken: (process.env.TWILIO_AUTH_TOKEN ?? "").trim(),
+  twilioFromNumber: normalizeTwilioFrom(process.env.TWILIO_FROM_NUMBER ?? ""),
   msg91AuthKey: process.env.MSG91_AUTH_KEY ?? "",
   msg91SenderId: process.env.MSG91_SENDER_ID ?? "SAFTRP",
   msg91TemplateId: process.env.MSG91_TEMPLATE_ID ?? "",

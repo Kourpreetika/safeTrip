@@ -3,7 +3,7 @@ import { getIO } from "../socket.ts";
 import { DEVIATION_STREAK_REQUIRED, isAtDestination, isOffRoute, type LatLng } from "../lib/geo.ts";
 import { notifyJourneyContacts } from "./notificationService.ts";
 import { fetchLiveRoute } from "./routingService.ts";
-import { formatTripSms, sendSmsToNumbers, shouldSendScheduledSms, isSmsConfigured, type SmsSendResult } from "./smsService.ts";
+import { formatTripSms, sendSmsToNumbers, shouldSendScheduledSms, isSmsConfigured, emptySmsResult, type SmsSendResult } from "./smsService.ts";
 import { config } from "../config.ts";
 
 function parseRoute(json: string | null): LatLng[] {
@@ -63,14 +63,18 @@ export async function sendJourneySms(params: {
 }): Promise<SmsSendResult> {
   const phones = params.journey.contacts.map((row) => row.contact.phone).filter(Boolean);
   if (!isSmsConfigured()) {
-    return { configured: false, sent: 0, failed: phones.length };
+    return emptySmsResult({
+      configured: false,
+      failed: phones.length,
+      errors: ["Add Twilio trial keys on the API (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER)."],
+    });
   }
   const last = await prisma.journey.findUnique({
     where: { id: params.journey.id },
     select: { lastSmsAt: true, etaMinutes: true },
   });
   if (!params.force && last?.lastSmsAt && !shouldSendScheduledSms(last.lastSmsAt, last.etaMinutes)) {
-    return { configured: true, sent: 0, failed: 0 };
+    return emptySmsResult({ configured: true });
   }
   const trackUrl = `${config.clientOrigin.replace(/\/+$/, "")}/track/${params.journey.shareToken}`;
   const body = formatTripSms({
