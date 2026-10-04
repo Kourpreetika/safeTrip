@@ -38,7 +38,7 @@ router.post(
     const body = registerSchema.parse(req.body);
     const exists = await prisma.user.findUnique({ where: { email: body.email } });
     if (exists) {
-      res.status(409).json({ error: "An account with this email already exists." });
+      res.status(409).json({ error: "An account with this email already exists. Log in with that email instead." });
       return;
     }
     const passwordHash = await bcrypt.hash(body.password, 10);

@@ -1,11 +1,11 @@
-// SafeTrip tables. SQLite is a local file so the project runs without installing MySQL/Postgres.
+// SafeTrip tables. PostgreSQL so accounts, contacts, and history survive deploys.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

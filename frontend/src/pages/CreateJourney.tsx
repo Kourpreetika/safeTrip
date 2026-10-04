@@ -94,23 +94,28 @@ export function CreateJourneyPage() {
       return;
     }
     setGpsMsg("Reading your location…");
+    const apply = async (pos: GeolocationPosition) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const label = await reverseIndiaPlace(lat, lng);
+      applyPickup({ label, title: "Current location", subtitle: label, lat, lng });
+    };
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const label = await reverseIndiaPlace(lat, lng);
-        applyPickup({ label, title: "Current location", subtitle: label, lat, lng });
+      (pos) => void apply(pos),
+      () => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => void apply(pos),
+          (err) => {
+            if (err.code === err.PERMISSION_DENIED) {
+              setGpsMsg("Location permission denied. Allow Location for this site, or type a pickup area / PIN.");
+            } else {
+              setGpsMsg("Could not read GPS yet. Type a pickup area / PIN, or try Use my current location again.");
+            }
+          },
+          { enableHighAccuracy: false, timeout: 20000, maximumAge: 120000 },
+        );
       },
-      (err) => {
-        if (err.code === err.PERMISSION_DENIED) {
-          setGpsMsg("Location permission denied. Allow Location for this site, or type a pickup area / PIN.");
-        } else if (err.code === err.TIMEOUT) {
-          setGpsMsg("Location request timed out. Turn on GPS, or search for a pickup.");
-        } else {
-          setGpsMsg("Could not read GPS. Search for a pickup instead.");
-        }
-      },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 },
+      { enableHighAccuracy: true, timeout: 25000, maximumAge: 60000 },
     );
   }
 
@@ -159,7 +164,7 @@ export function CreateJourneyPage() {
       }>(`/api/journeys/${created.journey.id}/start`, { method: "POST" });
       const notice = smsNotice("Journey started.", started.sms);
       toast(notice.message, notice.kind);
-      navigate(`/app/journey/${started.journey.id}`);
+      navigate(`/app/journey/${started.journey.id}`, { state: { sms: started.sms } });
     } catch (err) {
       toast(err instanceof ApiError ? err.message : "Could not start the journey.", "err");
     } finally {

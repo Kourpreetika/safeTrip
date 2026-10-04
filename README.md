@@ -25,7 +25,7 @@ When a person travels alone in a cab, auto, or bike taxi, family members often h
 | Map | Leaflet + OpenStreetMap | Free map tiles. No Google Maps billing key needed. |
 | Backend | Node.js + Express | Same language as the frontend. REST APIs are straightforward to explain. |
 | Real-time | Socket.IO | Contacts see location updates without refreshing the page. |
-| Database | SQLite + Prisma | SQLite runs as a local file, so there is no MySQL/Postgres install. Prisma generates the tables from `schema.prisma`. |
+| Database | PostgreSQL + Prisma | Postgres keeps users, contacts, and history after deploys. Local: `docker compose up -d`. Hosted: set `DATABASE_URL` to a Render/Neon Postgres URL (not SQLite). |
 | Routing (roads + traffic) | Google Directions (optional key) + OSRM | Live remaining-route ETA. With `GOOGLE_MAPS_API_KEY`, duration includes traffic and faster alternatives. Without a key, OSRM still uses the real road network (not a guessed straight line). |
 | SMS | Twilio or MSG91 | Trusted contacts get location / ETA / tracking-link texts. Keys stay on the server. |
 | Geocoding | Nominatim (OpenStreetMap) | Address search and reverse geocoding for the start/destination fields. |
@@ -52,7 +52,7 @@ The browser talks to Express over REST for login, contacts, and journeys. While 
 flowchart LR
   Traveller[Traveller browser] --> API[Express API]
   Contact[Contact browser / track link] --> API
-  API --> DB[(SQLite)]
+  API --> DB[(PostgreSQL)]
   API --> IO[Socket.IO]
   IO --> Contact
   API --> OSM[Nominatim + OSRM]
@@ -60,7 +60,7 @@ flowchart LR
 ```
 
 ```
-Traveller  --REST-->  Express  --Prisma-->  SQLite
+Traveller  --REST-->  Express  --Prisma-->  PostgreSQL
                  |
                  +-- Socket.IO --> contact / track page
                  +-- Nominatim (search address)
@@ -69,7 +69,7 @@ Traveller  --REST-->  Express  --Prisma-->  SQLite
 
 ## Database tables
 
-SQLite file is created by Prisma (`backend/prisma/schema.prisma`).
+PostgreSQL tables are created by Prisma (`backend/prisma/schema.prisma`). Locally, start Postgres with `docker compose up -d` then `npm run db:push --prefix backend`.
 
 ```mermaid
 erDiagram
@@ -159,19 +159,24 @@ npm install
 cd backend && npm install && npx prisma generate && npx prisma db push
 cd ../frontend && npm install
 cd ..
+docker compose up -d
+cd backend && npx prisma db push
+cd ..
 npm run dev
 ```
 
 - Frontend: http://localhost:5173
 - API health: http://localhost:4000/api/health
 
-Copy `backend/.env.example` to `backend/.env`. Optional:
+Copy `backend/.env.example` to `backend/.env`. Set `DATABASE_URL` to Postgres (local docker: `postgresql://safetrip:safetrip@localhost:5432/safetrip`). Optional:
 
 - `GOOGLE_MAPS_API_KEY` — Directions API, live traffic ETA (never expose this in the frontend)
 - Twilio trial (recommended): `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` (E.164, e.g. `+1…`). On Render, add the same variables and restart. Trial accounts can only text [Verified Caller IDs](https://www.twilio.com/docs/voice/api/verified-caller-ids) — add each contact as `+91XXXXXXXXXX`. Enable SMS to India in Twilio geo permissions if sends are blocked.
 - Or MSG91 keys if you use that provider instead.
 
 If those keys are empty, location search (OpenStreetMap) and OSRM routing still work; SMS is skipped. `/api/health` reports `smsConfigured` and `smsProvider`.
+
+On Render, create a **Postgres** database, copy its Internal Database URL into the **safeTrip** service as `DATABASE_URL`, then deploy. Do not use `file:./dev.db` on Render — that file is deleted when the free instance sleeps, which wipes accounts, contacts, and history.
 
 ### Get started
 

@@ -48,7 +48,7 @@ export function RegisterPage() {
         <form onSubmit={onSubmit} className="card p-6 md:p-8">
           <p className="text-xs font-bold uppercase tracking-wider text-muted">Create your account</p>
           <h1 className="page-title mt-1">Register</h1>
-          <p className="page-lead">Create an account to share live trips with people you trust.</p>
+          <p className="page-lead">Create an account once. After that, log in to see your contacts and journey history.</p>
 
           <label className="field-label mt-5">Full name</label>
           <input

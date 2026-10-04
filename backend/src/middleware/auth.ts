@@ -36,19 +36,25 @@ export function signToken(userId: string): string {
   });
 }
 
+function authCookieOptions() {
+  const production = config.nodeEnv === "production";
+  return {
+    httpOnly: true as const,
+    sameSite: (production ? "none" : "lax") as "none" | "lax",
+    secure: production,
+    path: "/",
+  };
+}
+
 export function setAuthCookie(res: Response, token: string) {
   res.cookie("tm_token", token, {
-    httpOnly: true,
-    // Cross-site cookies (Vercel site → Render API) need SameSite=None; Secure.
-    sameSite: config.nodeEnv === "production" ? "none" : "lax",
-    secure: config.nodeEnv === "production",
+    ...authCookieOptions(),
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/",
   });
 }
 
 export function clearAuthCookie(res: Response) {
-  res.clearCookie("tm_token", { path: "/" });
+  res.clearCookie("tm_token", authCookieOptions());
 }
 
 function readToken(req: Request): string | null {

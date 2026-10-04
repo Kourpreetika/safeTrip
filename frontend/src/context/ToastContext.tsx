@@ -4,18 +4,26 @@ type Toast = { id: number; message: string; tone: "ok" | "warn" | "err" };
 
 const ToastContext = createContext<(message: string, tone?: Toast["tone"]) => void>(() => undefined);
 
+function durationFor(tone: Toast["tone"]) {
+  if (tone === "err" || tone === "warn") return 12_000;
+  return 6_000;
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const dismiss = useCallback((id: number) => {
+    setToasts((t) => t.filter((x) => x.id !== id));
+  }, []);
   const push = useCallback((message: string, tone: Toast["tone"] = "ok") => {
     const id = Date.now() + Math.random();
     setToasts((t) => [...t, { id, message, tone }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4200);
-  }, []);
+    setTimeout(() => dismiss(id), durationFor(tone));
+  }, [dismiss]);
 
   return (
     <ToastContext.Provider value={push}>
       {children}
-      <div className="pointer-events-none fixed right-4 top-4 z-[2000] flex w-[min(92vw,360px)] flex-col gap-2">
+      <div className="fixed right-4 top-4 z-[2000] flex w-[min(92vw,360px)] flex-col gap-2">
         {toasts.map((t) => (
           <div
             key={t.id}
@@ -23,7 +31,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               t.tone === "err" ? "bg-sos" : t.tone === "warn" ? "bg-amber-600" : "bg-header"
             }`}
           >
-            {t.message}
+            <div className="flex items-start gap-3">
+              <p className="flex-1">{t.message}</p>
+              <button
+                type="button"
+                className="shrink-0 text-white/80 hover:text-white"
+                onClick={() => dismiss(t.id)}
+                aria-label="Dismiss"
+              >
+                ×
+              </button>
+            </div>
           </div>
         ))}
       </div>

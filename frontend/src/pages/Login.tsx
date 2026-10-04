@@ -32,7 +32,7 @@ export function LoginPage() {
         <form onSubmit={onSubmit} className="card p-6 md:p-8">
           <p className="text-xs font-bold uppercase tracking-wider text-muted">Welcome back</p>
           <h1 className="page-title mt-1">Login</h1>
-          <p className="page-lead">Sign in to start a journey or follow someone you trust.</p>
+          <p className="page-lead">Sign in with the email you registered. Your contacts and trip history stay on this account.</p>
 
           <label className="field-label mt-5">Email</label>
           <input

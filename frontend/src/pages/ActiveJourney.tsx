@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { MapView } from "../components/MapView";
 import { useGeolocation } from "../hooks/useGeolocation";
@@ -8,14 +8,20 @@ import { useToast } from "../context/ToastContext";
 import { ApiError } from "../api/client";
 import type { Journey } from "../types";
 import { etaCaption, etaDisplay } from "../lib/eta";
+import { smsNotice, type SmsResult } from "../lib/smsStatus";
 
 export function ActiveJourneyPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const [journey, setJourney] = useState<Journey | null>(null);
   const [confirmSos, setConfirmSos] = useState(false);
   const lastPosted = useRef(0);
+  const startSms = (location.state as { sms?: SmsResult } | null)?.sms;
+  const [smsBanner, setSmsBanner] = useState<string | null>(() =>
+    startSms ? smsNotice("Journey started.", startSms).message : null,
+  );
 
   const live = journey?.status === "active";
   const interval = journey?.sosActive ? 3000 : 8000;
@@ -157,6 +163,15 @@ export function ActiveJourneyPage() {
       </div>
 
       <MapView journey={journey} className="mt-4 h-72 md:h-96" />
+
+      {smsBanner && (
+        <p className="mt-3 rounded-xl border border-line bg-white px-4 py-3 text-sm text-ink">
+          {smsBanner}
+          <button type="button" className="ml-2 text-muted underline" onClick={() => setSmsBanner(null)}>
+            Dismiss
+          </button>
+        </p>
+      )}
 
       {gpsError && live && (
         <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-ink">{gpsError}</p>
