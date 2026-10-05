@@ -29,7 +29,7 @@ const features = [
   {
     icon: ShieldAlert,
     title: "One-Tap SOS",
-    text: "Alerts your trusted contacts in SafeTrip with your live location, driver name, and vehicle number. Cancel anytime if it was a mistake.",
+    text: "Alerts your trusted contacts in SafeTrip and on Telegram with your live location, driver name, and vehicle number. Cancel anytime if it was a mistake.",
   },
 ];
 

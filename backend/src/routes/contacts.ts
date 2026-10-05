@@ -42,6 +42,7 @@ router.get(
       contacts: contacts.map((c) => ({
         ...c,
         alertsEnabled: accounts.some((a) => a.phone === c.phone || (c.email != null && a.email === c.email)),
+        telegramLinked: Boolean(c.telegramChatId),
       })),
     });
   }),

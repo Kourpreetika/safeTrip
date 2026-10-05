@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { normalizeIndianMobile } from "./phone.ts";
-import { smsIntervalMs } from "./smsSchedule.ts";
+import { alertIntervalMs } from "./smsSchedule.ts";
 import { formatTripSms } from "./smsMessage.ts";
 
 test("accepts a 10-digit Indian mobile", () => {
@@ -18,12 +18,12 @@ test("rejects landline-style and short numbers", () => {
   assert.equal(normalizeIndianMobile("5123456789"), null);
 });
 
-test("SMS interval follows ETA bands", () => {
-  assert.equal(smsIntervalMs(10), 3 * 60 * 1000);
-  assert.equal(smsIntervalMs(15), 4 * 60 * 1000);
-  assert.equal(smsIntervalMs(40), 4 * 60 * 1000);
-  assert.equal(smsIntervalMs(41), 5 * 60 * 1000);
-  assert.equal(smsIntervalMs(null), 5 * 60 * 1000);
+test("alert interval follows ETA bands", () => {
+  assert.equal(alertIntervalMs(10), 3 * 60 * 1000);
+  assert.equal(alertIntervalMs(15), 4 * 60 * 1000);
+  assert.equal(alertIntervalMs(40), 4 * 60 * 1000);
+  assert.equal(alertIntervalMs(41), 5 * 60 * 1000);
+  assert.equal(alertIntervalMs(null), 5 * 60 * 1000);
 });
 
 test("trip SMS includes pickup, drop, driver, and tracking link", () => {

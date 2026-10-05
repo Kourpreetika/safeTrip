@@ -13,6 +13,7 @@ export type Contact = {
   email?: string | null;
   relationship?: string | null;
   alertsEnabled?: boolean;
+  telegramLinked?: boolean;
 };
 
 export type Journey = {

@@ -111,12 +111,12 @@ export function ActiveJourneyPage() {
       setConfirmSos(false);
       const sent = result.sms?.sent ?? 0;
       if (sent > 0) {
-        toast(`SOS sent. SMS went to ${sent} trusted contact${sent === 1 ? "" : "s"}.`, "err");
+        toast(`SOS sent. Telegram went to ${sent} trusted contact${sent === 1 ? "" : "s"}.`, "err");
       } else if (!result.sms?.configured) {
-        toast("SOS sent in SafeTrip. Add Twilio trial keys on the API to also send SMS.", "err");
+        toast("SOS sent in SafeTrip. Telegram is not configured on the API.", "err");
       } else {
         toast(
-          `SOS sent in SafeTrip. SMS did not send. ${result.sms?.errors?.[0] ?? "Verify contact numbers in Twilio."}`,
+          `SOS sent in SafeTrip. Telegram did not send. ${result.sms?.errors?.[0] ?? "Ask contacts to message @SafeTripAlertBot."}`,
           "err",
         );
       }
@@ -222,6 +222,7 @@ export function ActiveJourneyPage() {
               <li key={c.id}>
                 {c.name}
                 <span className="text-muted"> · {c.phone}</span>
+                {c.telegramLinked ? <span className="text-muted"> · Telegram</span> : null}
               </li>
             ))}
           </ul>
@@ -233,7 +234,7 @@ export function ActiveJourneyPage() {
           <section className="mt-6 rounded-xl border border-red-200 bg-white p-4 shadow-card">
             <h2 className="text-sm font-semibold text-ink">Emergency</h2>
             <p className="mt-1 text-sm text-muted">
-              SOS alerts your trusted contacts in SafeTrip with your live location, driver name, and vehicle number.
+              SOS alerts your trusted contacts in SafeTrip and on Telegram (@SafeTripAlertBot) with your live location, driver name, and vehicle number.
             </p>
             <button type="button" onClick={() => setConfirmSos(true)} className="btn-sos mt-4 w-full">
               SOS

@@ -62,7 +62,13 @@ export function ContactsPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="page-title">Trusted Contacts</h1>
-      <p className="page-lead">Save people you trust with a valid Indian mobile number so they can be notified on your trips.</p>
+      <p className="page-lead">
+        Save people you trust with a valid Indian mobile number. For free SOS alerts they must also open{" "}
+        <a className="link" href="https://t.me/SafeTripAlertBot" target="_blank" rel="noreferrer">
+          @SafeTripAlertBot
+        </a>
+        , tap Start, and send that same number.
+      </p>
       <form onSubmit={onSubmit} className="card mt-6 space-y-4 p-5">
         <label>
           <span className="field-label">Name</span>
@@ -125,9 +131,12 @@ export function ContactsPage() {
                 {c.relationship ? `${c.relationship} · ` : ""}
                 {c.phone}
               </div>
+              <div className={`mt-1 text-xs font-medium ${c.telegramLinked ? "text-ink" : "text-muted"}`}>
+                {c.telegramLinked ? "Telegram alerts on" : "Telegram not linked yet"}
+              </div>
               <div className={`mt-1 text-xs font-medium ${c.alertsEnabled ? "text-ink" : "text-muted"}`}>
                 {c.alertsEnabled
-                  ? "Automatic alerts on"
+                  ? "In-app alerts on"
                   : "No SafeTrip account on this number yet"}
               </div>
             </div>

@@ -3,7 +3,9 @@ import { getIO } from "../socket.ts";
 import { DEVIATION_STREAK_REQUIRED, isAtDestination, isOffRoute, type LatLng } from "../lib/geo.ts";
 import { notifyJourneyContacts } from "./notificationService.ts";
 import { fetchLiveRoute } from "./routingService.ts";
-import { formatTripSms, sendSmsToNumbers, shouldSendScheduledSms, isSmsConfigured, emptySmsResult, type SmsSendResult } from "./smsService.ts";
+import { formatTripSms } from "../lib/smsMessage.ts";
+import { shouldSendScheduledAlert } from "../lib/smsSchedule.ts";
+import { emptyAlertResult, isTelegramConfigured, sendTelegramToContacts, type AlertSendResult } from "./telegramService.ts";
 import { config } from "../config.ts";
 
 function parseRoute(json: string | null): LatLng[] {
@@ -56,25 +58,17 @@ export async function sendJourneySms(params: {
     currentLat: number | null;
     currentLng: number | null;
     user: { name: string };
-    contacts: Array<{ contact: { phone: string } }>;
+    contacts: Array<{ contact: { phone: string; telegramChatId?: string | null } }>;
   };
   status: string;
   force: boolean;
-}): Promise<SmsSendResult> {
-  const phones = params.journey.contacts.map((row) => row.contact.phone).filter(Boolean);
-  if (!isSmsConfigured()) {
-    return emptySmsResult({
-      configured: false,
-      failed: phones.length,
-      errors: ["Add Twilio trial keys on the API (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER)."],
-    });
-  }
+}): Promise<AlertSendResult> {
   const last = await prisma.journey.findUnique({
     where: { id: params.journey.id },
     select: { lastSmsAt: true, etaMinutes: true },
   });
-  if (!params.force && last?.lastSmsAt && !shouldSendScheduledSms(last.lastSmsAt, last.etaMinutes)) {
-    return emptySmsResult({ configured: true });
+  if (!params.force && last?.lastSmsAt && !shouldSendScheduledAlert(last.lastSmsAt, last.etaMinutes)) {
+    return emptyAlertResult();
   }
   const trackUrl = `${config.clientOrigin.replace(/\/+$/, "")}/track/${params.journey.shareToken}`;
   const body = formatTripSms({
@@ -91,7 +85,13 @@ export async function sendJourneySms(params: {
     lng: params.journey.currentLng,
     trackUrl,
   });
-  const result = await sendSmsToNumbers(phones, body);
+  const result = isTelegramConfigured()
+    ? await sendTelegramToContacts(params.journey.contacts, body)
+    : emptyAlertResult({
+        configured: false,
+        failed: params.journey.contacts.length,
+        errors: ["Add TELEGRAM_BOT_TOKEN on the API."],
+      });
   if (result.sent > 0) {
     await prisma.journey.update({
       where: { id: params.journey.id },

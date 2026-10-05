@@ -3,7 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { isAllowedOrigin } from "./config.ts";
-import { isSmsConfigured, resolvedSmsProvider } from "./services/smsService.ts";
+import { isTelegramConfigured, telegramBotUrl } from "./services/telegramService.ts";
 import { errorHandler } from "./middleware/error.ts";
 import authRoutes from "./routes/auth.ts";
 import contactRoutes from "./routes/contacts.ts";
@@ -31,8 +31,8 @@ export function createApp() {
     res.json({
       ok: true,
       service: "safetrip-api",
-      smsConfigured: isSmsConfigured(),
-      smsProvider: resolvedSmsProvider(),
+      telegramConfigured: isTelegramConfigured(),
+      telegramBot: isTelegramConfigured() ? telegramBotUrl() : null,
     });
   });
 

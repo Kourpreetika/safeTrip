@@ -1,6 +1,5 @@
 export function etaCaption(source?: string | null): string {
-  if (source === "google_traffic") return "Includes live traffic";
-  if (source === "google" || source === "osrm") return "Based on the current route";
+  if (source === "osrm") return "Based on the current route";
   return "";
 }
 

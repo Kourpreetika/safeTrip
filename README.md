@@ -26,8 +26,8 @@ When a person travels alone in a cab, auto, or bike taxi, family members often h
 | Backend | Node.js + Express | Same language as the frontend. REST APIs are straightforward to explain. |
 | Real-time | Socket.IO | Contacts see location updates without refreshing the page. |
 | Database | PostgreSQL + Prisma | Postgres keeps users, contacts, and history after deploys. Local: `docker compose up -d`. Hosted: set `DATABASE_URL` to a Render/Neon Postgres URL (not SQLite). |
-| Routing (roads + traffic) | Google Directions (optional key) + OSRM | Live remaining-route ETA. With `GOOGLE_MAPS_API_KEY`, duration includes traffic and faster alternatives. Without a key, OSRM still uses the real road network (not a guessed straight line). |
-| SMS | Twilio or MSG91 | Trusted contacts get location / ETA / tracking-link texts. Keys stay on the server. |
+| Routing | OSRM | Live remaining-route ETA on the real road network (not a straight-line guess). |
+| Alerts | Telegram Bot API | Trusted contacts get location, ETA, and the tracking link in Telegram. Free. |
 | Geocoding | Nominatim (OpenStreetMap) | Address search and reverse geocoding for the start/destination fields. |
 
 ## Modules / screens
@@ -124,15 +124,15 @@ Most routes except auth, health, geo, and public track need a logged-in cookie.
 
 **Live tracking.** Every few seconds the active-journey page reads the browser Geolocation API (`watchPosition`) and sends `lat` / `lng` to `POST /api/journeys/:id/locations`. The server saves a `LocationUpdate`, updates `currentLat` / `currentLng` on the journey, and broadcasts `location:update` on Socket.IO rooms `track:<shareToken>` and `journey:<id>`. The public track page joins the same room, so the marker moves without a full reload. If SOS is on, the frontend polls GPS more often (about 3 seconds instead of 8). If location permission is denied or GPS times out, the app shows an error and does not invent coordinates.
 
-**ETA.** The server asks the routing service for the remaining drive from the *current* GPS point to the destination (not a fixed number typed at the start). If `GOOGLE_MAPS_API_KEY` is set, Google Directions is used with `departure_time=now` so the minutes include live traffic, and a faster alternative is chosen when one is returned. If that key is missing or Google fails, OSRM is used (road geometry and typical speeds). If both fail, the last known live ETA is kept and the UI shows “Updating…” instead of a made-up time. The route is refreshed about every 45 seconds (sooner if the user is off the planned path). If a new path is clearly shorter, the map polyline is replaced.
+**ETA.** The server asks OSRM for the remaining drive from the *current* GPS point to the destination (not a fixed number typed at the start). If that fails, the last known live ETA is kept and the UI shows “Updating…”. The route is refreshed about every 45 seconds (sooner if the user is off the planned path). If a new path is clearly shorter, the map polyline is replaced.
 
-**SMS to trusted contacts.** Contacts must have a valid Indian mobile number (10 digits, starts with 6–9). When Twilio (or MSG91) keys are set, the backend sends real SMS with current location, journey status, ETA, destination, last-updated time, and the `/track/...` link. Frequency follows the *latest* ETA:
+**Telegram to trusted contacts.** Contacts must have a valid Indian mobile number (10 digits, starts with 6–9). They open `@SafeTripAlertBot`, tap Start, and send that same number. Then journey start, SOS, off-route, and arrival alerts go to Telegram with location, ETA, destination, and the `/track/...` link. Frequency follows the *latest* ETA:
 
 - under 15 minutes → every 3 minutes
 - 15–40 minutes → every 4 minutes
 - above 40 minutes → every 5 minutes
 
-Journey start, SOS, and arrival send immediately. If SMS keys are not set, trips still work; texts are simply not sent (nothing is faked).
+Journey start, SOS, and arrival send immediately. If the bot token is missing, or a contact has not linked Telegram, trips still work; in-app alerts still send.
 
 **Destination arrival.** If the current point is within **120 metres** of the destination (a simple radius / geofence), the journey is marked completed and contacts are notified. This avoids waiting for an exact coordinate match.
 
@@ -168,13 +168,9 @@ npm run dev
 - Frontend: http://localhost:5173
 - API health: http://localhost:4000/api/health
 
-Copy `backend/.env.example` to `backend/.env`. Set `DATABASE_URL` to Postgres (local docker: `postgresql://safetrip:safetrip@localhost:5432/safetrip`). Optional:
+Copy `backend/.env.example` to `backend/.env`. Set `DATABASE_URL` to Postgres (local docker: `postgresql://safetrip:safetrip@localhost:5432/safetrip`). Set `TELEGRAM_BOT_TOKEN` from [@BotFather](https://t.me/BotFather). Contacts open `t.me/SafeTripAlertBot`, tap Start, and send their 10-digit mobile. `/api/health` reports `telegramConfigured`.
 
-- `GOOGLE_MAPS_API_KEY` — Directions API, live traffic ETA (never expose this in the frontend)
-- Twilio trial (recommended): `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` (E.164, e.g. `+1…`). On Render, add the same variables and restart. Trial accounts can only text [Verified Caller IDs](https://www.twilio.com/docs/voice/api/verified-caller-ids) — add each contact as `+91XXXXXXXXXX`. Enable SMS to India in Twilio geo permissions if sends are blocked.
-- Or MSG91 keys if you use that provider instead.
-
-If those keys are empty, location search (OpenStreetMap) and OSRM routing still work; SMS is skipped. `/api/health` reports `smsConfigured` and `smsProvider`.
+Location search (OpenStreetMap) and OSRM routing do not need extra keys.
 
 On Render, create a **Postgres** database, copy its Internal Database URL into the **safeTrip** service as `DATABASE_URL`, then deploy. Do not use `file:./dev.db` on Render — that file is deleted when the free instance sleeps, which wipes accounts, contacts, and history.
 
@@ -194,7 +190,7 @@ To show SOS or off-route in a viva, use a real trip: trigger SOS from the active
 cd backend && npm test
 ```
 
-These check Haversine distance, the 120 m arrival radius, off-route detection, Indian mobile numbers, and SMS timing bands.
+These check Haversine distance, the 120 m arrival radius, off-route detection, Indian mobile numbers, and Telegram alert timing bands.
 
 ## Future scope
 

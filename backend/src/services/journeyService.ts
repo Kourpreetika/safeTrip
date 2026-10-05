@@ -4,7 +4,7 @@ import { getIO } from "../socket.ts";
 import { notifyJourneyContacts } from "./notificationService.ts";
 import { config } from "../config.ts";
 import { sendJourneySms } from "./locationService.ts";
-import { emptySmsResult, type SmsSendResult } from "./smsService.ts";
+import { emptyAlertResult, type AlertSendResult } from "./telegramService.ts";
 
 export async function createJourney(params: {
   userId: string;
@@ -67,7 +67,7 @@ export const journeyInclude = {
 
 export async function startJourney(params: { journeyId: string; userId: string }): Promise<{
   journey: Awaited<ReturnType<typeof createJourney>>;
-  sms: SmsSendResult;
+  sms: AlertSendResult;
 }> {
   const journey = await prisma.journey.findFirst({
     where: { id: params.journeyId, userId: params.userId },
@@ -79,7 +79,7 @@ export async function startJourney(params: { journeyId: string; userId: string }
     throw err;
   }
   if (journey.status === "active") {
-    return { journey, sms: emptySmsResult() };
+    return { journey, sms: emptyAlertResult() };
   }
 
   const otherActive = await prisma.journey.findFirst({
@@ -166,6 +166,7 @@ export function serializeJourney(journey: Awaited<ReturnType<typeof createJourne
       phone: c.contact.phone,
       email: c.contact.email,
       relationship: c.contact.relationship,
+      telegramLinked: Boolean(c.contact.telegramChatId),
     })),
     sosEvents: journey.sosEvents,
   };

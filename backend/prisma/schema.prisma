@@ -27,11 +27,12 @@ model TrustedContact {
   id           String   @id @default(cuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name         String
-  phone        String
-  email        String?
-  relationship String?
-  createdAt    DateTime @default(now())
+  name           String
+  phone          String
+  email          String?
+  relationship   String?
+  telegramChatId String?
+  createdAt      DateTime @default(now())
 
   journeys JourneyContact[]
 
