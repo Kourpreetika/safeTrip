@@ -54,7 +54,22 @@ export async function sendTelegramToContacts(
   contacts: Array<{ contact: { phone: string; telegramChatId?: string | null } }>,
   text: string,
 ): Promise<AlertSendResult> {
-  const chats = [...new Set(contacts.map((row) => row.contact.telegramChatId).filter((id): id is string => Boolean(id)))];
+  const phones = [...new Set(contacts.map((row) => row.contact.phone).filter(Boolean))];
+  const linked =
+    phones.length === 0
+      ? []
+      : await prisma.trustedContact.findMany({
+          where: { phone: { in: phones }, telegramChatId: { not: null } },
+          select: { telegramChatId: true },
+        });
+  const chats = [
+    ...new Set(
+      [
+        ...contacts.map((row) => row.contact.telegramChatId),
+        ...linked.map((row) => row.telegramChatId),
+      ].filter((id): id is string => Boolean(id)),
+    ),
+  ];
   if (!isTelegramConfigured()) {
     return emptyAlertResult({
       configured: false,
@@ -89,14 +104,16 @@ export async function sendTelegramToContacts(
 }
 
 export async function handleTelegramText(chatId: string, rawText: string): Promise<string> {
-  const text = rawText.trim();
-  if (!text || text.startsWith("/start")) {
+  let text = rawText.trim();
+  const start = text.match(/^\/start(?:@\w+)?(?:\s+(.+))?$/i);
+  if (start && !start[1]) {
     return [
       "SafeTrip alerts",
       "Send your 10-digit Indian mobile number (the same one saved as a trusted contact).",
       "Example: 9103714313",
     ].join("\n");
   }
+  if (start?.[1]) text = start[1].trim();
   if (text.startsWith("/")) {
     return "Send your 10-digit Indian mobile number to receive SOS and journey alerts.";
   }

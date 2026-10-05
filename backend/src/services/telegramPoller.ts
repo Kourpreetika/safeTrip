@@ -7,16 +7,38 @@ type TelegramUpdate = {
 };
 
 let offset = 0;
-let stopped = false;
-let timer: ReturnType<typeof setTimeout> | null = null;
+let abort: AbortController | null = null;
+let loopPromise: Promise<void> | null = null;
 
-async function pollOnce(): Promise<void> {
+async function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  await new Promise<void>((resolve) => {
+    const t = setTimeout(resolve, ms);
+    signal.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(t);
+        resolve();
+      },
+      { once: true },
+    );
+  });
+}
+
+async function pollOnce(signal: AbortSignal): Promise<"ok" | "conflict" | "empty"> {
   const url = `https://api.telegram.org/bot${config.telegramBotToken}/getUpdates?timeout=25&offset=${offset}`;
-  const response = await fetch(url);
-  const data = (await response.json().catch(() => ({}))) as { ok?: boolean; result?: TelegramUpdate[]; description?: string };
+  const response = await fetch(url, { signal });
+  const data = (await response.json().catch(() => ({}))) as {
+    ok?: boolean;
+    result?: TelegramUpdate[];
+    description?: string;
+    error_code?: number;
+  };
+  if (data.error_code === 409 || /terminated by other getUpdates/i.test(data.description ?? "")) {
+    return "conflict";
+  }
   if (!data.ok || !Array.isArray(data.result)) {
     if (data.description) console.error("Telegram getUpdates:", data.description);
-    return;
+    return "empty";
   }
   for (const update of data.result) {
     offset = update.update_id + 1;
@@ -30,32 +52,38 @@ async function pollOnce(): Promise<void> {
       console.error("Telegram update failed:", err);
     }
   }
+  return "ok";
 }
 
-async function loop(): Promise<void> {
-  while (!stopped) {
+async function loop(signal: AbortSignal): Promise<void> {
+  while (!signal.aborted) {
     try {
-      await pollOnce();
+      const status = await pollOnce(signal);
+      if (status === "conflict") {
+        console.warn("Telegram: another poller was running; retrying in 3s.");
+        await sleep(3000, signal);
+      }
     } catch (err) {
+      if (signal.aborted) return;
       console.error("Telegram poll error:", err);
-      await new Promise((resolve) => {
-        timer = setTimeout(resolve, 4000);
-      });
+      await sleep(4000, signal);
     }
   }
 }
 
 export function startTelegramPolling(): void {
+  stopTelegramPolling();
   if (!isTelegramConfigured()) {
     console.log("Telegram bot not configured — SOS will not send Telegram messages.");
     return;
   }
-  stopped = false;
+  abort = new AbortController();
   console.log(`Telegram bot polling @${config.telegramBotUsername}`);
-  void loop();
+  loopPromise = loop(abort.signal);
 }
 
 export function stopTelegramPolling(): void {
-  stopped = true;
-  if (timer) clearTimeout(timer);
+  abort?.abort();
+  abort = null;
+  loopPromise = null;
 }
