@@ -59,6 +59,56 @@ export async function createJourney(params: {
   });
 }
 
+type JourneyInput = Parameters<typeof createJourney>[0];
+
+export async function updateDraftJourney(params: JourneyInput & { journeyId: string }) {
+  const existing = await prisma.journey.findFirst({
+    where: { id: params.journeyId, userId: params.userId },
+  });
+  if (!existing) {
+    const err = new Error("Journey not found.");
+    (err as Error & { status: number }).status = 404;
+    throw err;
+  }
+  if (existing.status !== "draft") {
+    const err = new Error("Only a saved draft can be edited.");
+    (err as Error & { status: number }).status = 400;
+    throw err;
+  }
+  const owned = await prisma.trustedContact.findMany({
+    where: { userId: params.userId, id: { in: params.contactIds } },
+    select: { id: true },
+  });
+  if (owned.length !== params.contactIds.length) {
+    const err = new Error("One or more trusted contacts are invalid.");
+    (err as Error & { status: number }).status = 400;
+    throw err;
+  }
+  await prisma.journeyContact.deleteMany({ where: { journeyId: existing.id } });
+  return prisma.journey.update({
+    where: { id: existing.id },
+    data: {
+      startAddress: params.startAddress,
+      startLat: params.startLat,
+      startLng: params.startLng,
+      destAddress: params.destAddress,
+      destLat: params.destLat,
+      destLng: params.destLng,
+      vehicleNumber: params.vehicleNumber.trim().toUpperCase(),
+      driverName: params.driverName.trim(),
+      rideProvider: params.rideProvider,
+      rideId: params.rideId,
+      estimatedDurationMin: params.estimatedDurationMin,
+      plannedRouteJson: JSON.stringify(params.plannedRoute),
+      routeDistanceMeters: params.routeDistanceMeters,
+      contacts: {
+        create: params.contactIds.map((contactId) => ({ contactId })),
+      },
+    },
+    include: journeyInclude,
+  });
+}
+
 export const journeyInclude = {
   contacts: { include: { contact: true } },
   sosEvents: { orderBy: { triggeredAt: "desc" as const }, take: 5 },
@@ -78,6 +128,12 @@ export async function startJourney(params: { journeyId: string; userId: string }
     (err as Error & { status: number }).status = 404;
     throw err;
   }
+  if (journey.status === "completed" || journey.status === "cancelled") {
+    const err = new Error("This journey already ended. Open a draft or create a new one.");
+    (err as Error & { status: number }).status = 400;
+    throw err;
+  }
+
   if (journey.status === "active") {
     return { journey, sms: emptyAlertResult() };
   }

@@ -123,12 +123,16 @@ export async function handleTelegramText(chatId: string, rawText: string): Promi
   }
   const matches = await prisma.trustedContact.findMany({ where: { phone } });
   if (matches.length === 0) {
-    return `No trusted contact in SafeTrip uses ${phone}. Ask them to add this number on the Contacts page, then send it here again.`;
+    const account = await prisma.user.findFirst({ where: { phone }, select: { id: true } });
+    if (account) {
+      return "This number is a SafeTrip login. Add it as a trusted contact on the traveller's account, then send it here again for SOS alerts.";
+    }
+    return `No trusted contact uses ${phone}. Add this number on Contacts, then send it here again.`;
   }
   await prisma.trustedContact.updateMany({
     where: { phone },
     data: { telegramChatId: String(chatId) },
   });
   const names = [...new Set(matches.map((c) => c.name))].join(", ");
-  return `Linked. You will get SafeTrip SOS and journey alerts for ${names}.`;
+  return `Linked. You will get SafeTrip alerts for ${names}.`;
 }

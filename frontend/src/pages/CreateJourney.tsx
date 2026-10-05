@@ -1,11 +1,10 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowUpDown } from "lucide-react";
-import { api } from "../api/client";
+import { api, ApiError } from "../api/client";
 import { PlaceSearch } from "../components/PlaceSearch";
 import { MapView } from "../components/MapView";
 import { useToast } from "../context/ToastContext";
-import { ApiError } from "../api/client";
 import { reverseIndiaPlace, type Place } from "../lib/places";
 import type { Contact, Journey } from "../types";
 import { smsNotice, type SmsResult } from "../lib/smsStatus";
@@ -20,6 +19,8 @@ type RouteInfo = {
 
 export function CreateJourneyPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const draftId = searchParams.get("draft");
   const toast = useToast();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [startAddress, setStartAddress] = useState("");
@@ -39,9 +40,43 @@ export function CreateJourneyPage() {
   useEffect(() => {
     void api<{ contacts: Contact[] }>("/api/contacts").then((d) => {
       setContacts(d.contacts);
-      setSelected(d.contacts.map((c) => c.id));
+      if (!draftId) setSelected(d.contacts.map((c) => c.id));
     });
-  }, []);
+  }, [draftId]);
+
+  useEffect(() => {
+    if (!draftId) return;
+    void api<{ journey: Journey }>(`/api/journeys/${draftId}`)
+      .then((d) => {
+        const j = d.journey;
+        if (j.status !== "draft") {
+          toast("This journey is no longer a draft.", "warn");
+          navigate(j.status === "active" ? `/app/journey/${j.id}` : "/app");
+          return;
+        }
+        setStartAddress(j.startAddress);
+        setDestAddress(j.destAddress);
+        setStart({ lat: j.startLat, lng: j.startLng });
+        setDest({ lat: j.destLat, lng: j.destLng });
+        setDriverName(j.driverName);
+        setVehicleNumber(j.vehicleNumber);
+        setRideProvider(j.rideProvider || "Uber");
+        setRideId(j.rideId || "");
+        setSelected(j.contacts.map((c) => c.id));
+        if (j.plannedRoute?.length) {
+          setRoute({
+            coordinates: j.plannedRoute,
+            durationMin: j.estimatedDurationMin,
+            distanceMeters: j.routeDistanceMeters ?? null,
+            source: j.etaSource ?? undefined,
+          });
+        }
+      })
+      .catch(() => {
+        toast("Could not open that draft.", "err");
+        navigate("/app");
+      });
+  }, [draftId]);
 
   useEffect(() => {
     if (!start || !dest) {
@@ -119,49 +154,82 @@ export function CreateJourneyPage() {
     );
   }
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function persist() {
+    const body = {
+      startAddress,
+      startLat: start!.lat,
+      startLng: start!.lng,
+      destAddress,
+      destLat: dest!.lat,
+      destLng: dest!.lng,
+      vehicleNumber,
+      driverName,
+      rideProvider,
+      rideId: rideId.trim(),
+      estimatedDurationMin: route!.durationMin as number,
+      contactIds: selected,
+      plannedRoute: route!.coordinates,
+      routeDistanceMeters: route!.distanceMeters ?? undefined,
+    };
+    if (draftId) {
+      const updated = await api<{ journey: Journey }>(`/api/journeys/${draftId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      return updated.journey;
+    }
+    const created = await api<{ journey: Journey }>("/api/journeys", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    setSearchParams({ draft: created.journey.id }, { replace: true });
+    return created.journey;
+  }
+
+  function validate() {
     if (!start || !dest) {
       toast("Select a pickup and a drop from the suggestion list.", "warn");
-      return;
+      return false;
     }
     if (!route?.durationMin || !route.coordinates?.length) {
-      toast(routeError ?? "Wait for the live ETA to load before starting.", "warn");
-      return;
+      toast(routeError ?? "Wait for the live ETA to load before saving or starting.", "warn");
+      return false;
     }
     if (!rideId.trim()) {
       toast("Enter the ride ID.", "warn");
-      return;
+      return false;
     }
     if (selected.length === 0) {
-      toast("Select at least one trusted contact.", "warn");
-      return;
+      toast("Select at least one trusted contact from your saved list.", "warn");
+      return false;
     }
+    return true;
+  }
+
+  async function onSaveDraft() {
+    if (!validate()) return;
     setBusy(true);
     try {
-      const created = await api<{ journey: Journey }>("/api/journeys", {
-        method: "POST",
-        body: JSON.stringify({
-          startAddress,
-          startLat: start.lat,
-          startLng: start.lng,
-          destAddress,
-          destLat: dest.lat,
-          destLng: dest.lng,
-          vehicleNumber,
-          driverName,
-          rideProvider,
-          rideId: rideId.trim(),
-          estimatedDurationMin: route.durationMin as number,
-          contactIds: selected,
-          plannedRoute: route.coordinates,
-          routeDistanceMeters: route.distanceMeters ?? undefined,
-        }),
-      });
+      await persist();
+      toast("Draft saved. After you end any active trip, open this draft from the dashboard to start.");
+      navigate("/app");
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : "Could not save the draft.", "err");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!validate()) return;
+    setBusy(true);
+    try {
+      const journey = await persist();
       const started = await api<{
         journey: Journey;
         sms?: SmsResult;
-      }>(`/api/journeys/${created.journey.id}/start`, { method: "POST" });
+      }>(`/api/journeys/${journey.id}/start`, { method: "POST" });
       const notice = smsNotice("Journey started.", started.sms);
       toast(notice.message, notice.kind);
       navigate(`/app/journey/${started.journey.id}`, { state: { sms: started.sms } });
@@ -174,8 +242,12 @@ export function CreateJourneyPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="page-title">Create Journey</h1>
-      <p className="page-lead">Type a pickup and drop, then tap a suggestion — anywhere in India, including PIN codes.</p>
+      <h1 className="page-title">{draftId ? "Start saved draft" : "Create Journey"}</h1>
+      <p className="page-lead">
+        {draftId
+          ? "Tick or untick trusted contacts from your saved list, then start. You do not add contacts again."
+          : "Type a pickup and drop, then tap a suggestion — anywhere in India, including PIN codes."}
+      </p>
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <div className="card relative space-y-4 p-5">
           <PlaceSearch
@@ -260,6 +332,9 @@ export function CreateJourneyPage() {
 
         <div className="card p-5">
           <div className="text-sm font-medium text-ink">Trusted contacts</div>
+          <p className="mt-1 text-xs text-muted">
+            These are people you already saved. Select or deselect who should be notified this trip.
+          </p>
           {contacts.length === 0 && (
             <div className="empty-state mt-3 py-6">
               <p>Add contacts first so someone can follow this trip.</p>
@@ -287,9 +362,14 @@ export function CreateJourneyPage() {
           </div>
         </div>
 
-        <button type="submit" disabled={busy} className="btn-primary w-full py-3">
-          {busy ? "Starting…" : "Start journey"}
-        </button>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button type="button" disabled={busy} className="btn-secondary w-full py-3" onClick={() => void onSaveDraft()}>
+            {busy ? "Please wait…" : "Save draft"}
+          </button>
+          <button type="submit" disabled={busy} className="btn-primary w-full py-3">
+            {busy ? "Starting…" : "Start journey"}
+          </button>
+        </div>
       </form>
     </div>
   );

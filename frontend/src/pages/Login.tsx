@@ -54,6 +54,12 @@ export function LoginPage() {
             required
           />
 
+          <p className="mt-2 text-right text-sm">
+            <Link className="link" to="/forgot-password">
+              Forgot password?
+            </Link>
+          </p>
+
           <button type="submit" disabled={busy} className="btn-primary mt-6 w-full">
             {busy ? "Please wait…" : "Login"}
           </button>

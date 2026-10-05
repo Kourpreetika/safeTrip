@@ -8,9 +8,7 @@ export function DashboardPage() {
   const [incoming, setIncoming] = useState<Journey[]>([]);
 
   useEffect(() => {
-    void api<{ total: number; completed: number; sosCount: number; kmTravelled: number; deviationCount: number; active: Journey | null }>(
-      "/api/journeys/stats",
-    ).then(setStats);
+    void api<Stats>("/api/journeys/stats").then(setStats);
     void api<{ journeys: Journey[] }>("/api/journeys/incoming").then((d) => setIncoming(d.journeys));
   }, []);
 
@@ -33,6 +31,30 @@ export function DashboardPage() {
             {stats.active.sosActive ? " · SOS is active" : ""}
           </div>
         </Link>
+      )}
+
+      {!stats?.active && (stats?.drafts?.length ?? 0) > 0 && (
+        <section className="mt-5">
+          <h2 className="text-lg font-semibold text-ink">Saved drafts</h2>
+          <p className="mt-1 text-sm text-muted">Open a draft to start it. Tick or untick trusted contacts — you do not add them again.</p>
+          <div className="mt-3 space-y-3">
+            {stats!.drafts!.map((j) => (
+              <Link
+                key={j.id}
+                to={`/app/journey/new?draft=${j.id}`}
+                className="card block p-4 transition hover:bg-surface"
+              >
+                <div className="text-xs font-medium uppercase tracking-wide text-muted">Draft</div>
+                <div className="mt-1 font-medium text-ink">
+                  {j.startAddress} → {j.destAddress}
+                </div>
+                <div className="mt-0.5 text-sm text-muted">
+                  {j.driverName} · {j.vehicleNumber} · tap to start
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">

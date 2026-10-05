@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma.ts";
 import { asyncHandler } from "../middleware/error.ts";
 import { clearAuthCookie, requireAuth, setAuthCookie, signToken, type AuthedRequest } from "../middleware/auth.ts";
 import { indianMobileSchemaMessage, normalizeIndianMobile } from "../lib/phone.ts";
+import { resetPassword } from "../services/passwordResetService.ts";
 
 const router = Router();
 
@@ -69,6 +70,21 @@ router.post("/logout", (_req, res) => {
   clearAuthCookie(res);
   res.json({ ok: true });
 });
+
+const resetSchema = z.object({
+  email: z.string().trim().email().toLowerCase(),
+  password: registerSchema.shape.password,
+  phone: requiredPhone,
+});
+
+router.post(
+  "/reset-password",
+  asyncHandler(async (req, res) => {
+    const body = resetSchema.parse(req.body);
+    await resetPassword(body);
+    res.json({ ok: true });
+  }),
+);
 
 router.get(
   "/me",

@@ -1,7 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
-import { api } from "../api/client";
+import { api, ApiError } from "../api/client";
 import { useToast } from "../context/ToastContext";
-import { ApiError } from "../api/client";
 import type { Contact } from "../types";
 
 export function ContactsPage() {

@@ -6,6 +6,7 @@ import { GuestOnly, ProtectedRoute } from "./components/Guards";
 import { HomePage } from "./pages/Home";
 import { LoginPage } from "./pages/Login";
 import { RegisterPage } from "./pages/Register";
+import { ForgotPasswordPage } from "./pages/ForgotPassword";
 import { DashboardPage } from "./pages/Dashboard";
 import { CreateJourneyPage } from "./pages/CreateJourney";
 import { ContactsPage } from "./pages/Contacts";
@@ -24,6 +25,7 @@ export function App() {
             <Route element={<GuestOnly />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             </Route>
             <Route path="/track/:token" element={<PublicTrackPage />} />
             <Route element={<ProtectedRoute />}>

@@ -75,4 +75,5 @@ export type Stats = {
   kmTravelled: number;
   deviationCount: number;
   active: Journey | null;
+  drafts?: Journey[];
 };

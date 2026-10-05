@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.ts";
 import { asyncHandler } from "../middleware/error.ts";
 import { requireAuth, type AuthedRequest } from "../middleware/auth.ts";
-import { createJourney, journeyInclude, serializeJourney, startJourney } from "../services/journeyService.ts";
+import { createJourney, journeyInclude, serializeJourney, startJourney, updateDraftJourney } from "../services/journeyService.ts";
 import { completeJourney, recordLocation } from "../services/locationService.ts";
 import { cancelSos, mapsLink, triggerSos } from "../services/sosService.ts";
 import { config } from "../config.ts";
@@ -81,13 +81,19 @@ router.get(
   "/stats",
   asyncHandler(async (req, res) => {
     const { user } = req as AuthedRequest;
-    const [total, completed, sosCount, active] = await Promise.all([
+    const [total, completed, sosCount, active, drafts] = await Promise.all([
       prisma.journey.count({ where: { userId: user.id } }),
       prisma.journey.count({ where: { userId: user.id, status: "completed" } }),
       prisma.sosEvent.count({ where: { journey: { userId: user.id } } }),
       prisma.journey.findFirst({
         where: { userId: user.id, status: "active" },
         include: journeyInclude,
+      }),
+      prisma.journey.findMany({
+        where: { userId: user.id, status: "draft" },
+        include: journeyInclude,
+        orderBy: { updatedAt: "desc" },
+        take: 10,
       }),
     ]);
     const withRoute = await prisma.journey.findMany({
@@ -103,6 +109,7 @@ router.get(
       kmTravelled: Math.round(kmTravelled * 10) / 10,
       deviationCount,
       active: active ? serializeJourney(active) : null,
+      drafts: drafts.map(serializeJourney),
     });
   }),
 );
@@ -114,6 +121,16 @@ router.post(
     const body = createSchema.parse(req.body);
     const journey = await createJourney({ userId: user.id, ...body });
     res.status(201).json({ journey: serializeJourney(journey) });
+  }),
+);
+
+router.patch(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const { user } = req as AuthedRequest;
+    const body = createSchema.parse(req.body);
+    const journey = await updateDraftJourney({ journeyId: req.params.id, userId: user.id, ...body });
+    res.json({ journey: serializeJourney(journey) });
   }),
 );
 

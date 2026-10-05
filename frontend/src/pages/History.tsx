@@ -31,7 +31,13 @@ export function HistoryPage() {
         {journeys.map((j) => (
           <li key={j.id}>
             <Link
-              to={j.status === "active" ? `/app/journey/${j.id}` : `/track/${j.shareToken}`}
+              to={
+                j.status === "active"
+                  ? `/app/journey/${j.id}`
+                  : j.status === "draft"
+                    ? `/app/journey/new?draft=${j.id}`
+                    : `/track/${j.shareToken}`
+              }
               className="card block p-4 transition hover:bg-surface"
             >
               <div className="flex items-center justify-between text-sm text-muted">
